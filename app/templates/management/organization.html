@@ -1,0 +1,786 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .org-wrap { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; }
+  .org-header { border-bottom: 1px solid #e9ecef; }
+  .org-title { font-weight: 800; color: #212529; }
+  .merchant-pill { background: #ff6b35; color: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 0.95rem; }
+  .btn-primary-orange { background:#ff6b35; border-color:#ff6b35; }
+  .btn-primary-orange:hover { background:#e85e2e; border-color:#e85e2e; }
+  .card-border { border: 1px solid #e9ecef; }
+  .section-title { font-weight: 700; color:#2c3e50; }
+  .muted-label { font-size: .85rem; color:#6c757d; font-weight: 600; }
+  .logo-box { background: #f8f9fa; border: 1px dashed #cfd4da; border-radius: 8px; padding: 12px; text-align: center; }
+  .logo-box img { max-height: 120px; max-width: 100%; }
+
+  .address-card { background: #fff; border: 1px solid #e9ecef; border-left: 6px solid #6c757d; border-radius: 8px; padding: 10px; position: relative; }
+  .address-card.billing { border-left-color:#0d6efd; }
+  .address-card.shipping { border-left-color:#198754; }
+  .address-type-badge { position:absolute; top:-10px; left:10px; background:#0d6efd; color:#fff; padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:700; }
+  .address-card.shipping .address-type-badge { background:#198754; }
+  .remove-row { position:absolute; top:8px; right:8px; }
+  .repeater-add { border-style:dashed; }
+  .nav-tabs .nav-link { font-weight:700; }
+  .small-help { font-size:.8rem; color:#6c757d; }
+
+  .bucket-title { font-weight:800; color:#212529; font-size: .95rem; }
+  .bucket-sub { font-size:.8rem; color:#6c757d; }
+
+  .preview-box { background:#f8f9fa; border:1px dashed #d0d7de; border-radius:8px; padding:10px 12px; font-weight:700; color:#0d6efd; }
+
+  .compact-card .card-body { padding: 12px; }
+  .compact-card .row.g-2 { --bs-gutter-x: .75rem; --bs-gutter-y: .5rem; }
+  .bank-entry { border: 1px solid #e9ecef; border-radius: 8px; padding: 10px; position: relative; background: #fcfcfd; }
+  .bank-entry + .bank-entry { margin-top: 8px; }
+  .bank-entry .remove-row { top: 6px; right: 6px; }
+</style>
+
+<div class="org-wrap">
+  <form method="POST" enctype="multipart/form-data">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center py-3 org-header">
+      <div class="d-flex align-items-center gap-3">
+        <h2 class="org-title m-0">Organization</h2>
+        <span class="merchant-pill">Company ID: {{ company.merchant_id or 'Auto on Save' }}</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button type="submit" class="btn btn-primary-orange fw-bold px-4">
+          <i class="fas fa-save me-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mt-3" id="orgTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button" role="tab" aria-controls="tab-profile" aria-selected="true">
+          Profile
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="billship-tab" data-bs-toggle="tab" data-bs-target="#tab-billship" type="button" role="tab" aria-controls="tab-billship" aria-selected="false">
+          Bill/Ship
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">
+          Settings
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+
+      <!-- PROFILE TAB -->
+      <div class="tab-pane fade show active" id="tab-profile" role="tabpanel" aria-labelledby="profile-tab">
+        <div class="row g-4">
+          <div class="col-12">
+            <div class="row g-4">
+              <!-- Identity -->
+              <div class="col-lg-4">
+                <div class="card card-border shadow-sm h-100">
+                  <div class="card-body">
+                    <div class="bucket-title mb-1"><i class="fas fa-id-card me-2"></i>Identity</div>
+                    <div class="bucket-sub mb-3">Basic organization identity used on invoices</div>
+
+                    <!-- Logo -->
+                    <div class="mb-3">
+                      <label class="muted-label d-block mb-2">Organization Logo</label>
+                      <div class="logo-box mb-2">
+                        {% if company.logo_filename %}
+                          <img id="logoPreview" src="{{ url_for('static', filename='uploads/' + company.logo_filename) }}" alt="Logo">
+                        {% else %}
+                          <img id="logoPreview" src="" alt="" style="display:none;">
+                          <div class="text-muted">No logo uploaded</div>
+                        {% endif %}
+                      </div>
+                      <input type="file" name="logo" id="logoInput" class="form-control" accept="image/*">
+                      <div class="small-help mt-1">PNG/JPG, recommended max height 200px.</div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">Organization Name</label>
+                      <input type="text" name="name" class="form-control" value="{{ company.name or '' }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">Legal Name</label>
+                      <input type="text" name="legal_name" class="form-control" value="{{ company.legal_name or '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">Industry</label>
+                      <input type="text" name="industry" class="form-control" value="{{ company.industry or '' }}" placeholder="e.g., Professional Services, Software, Manufacturing">
+                    </div>
+
+                    <div class="mb-0">
+                      <label class="muted-label">Company ID</label>
+                      <input type="text" class="form-control" value="{{ company.merchant_id or '' }}" name="merchant_id" readonly>
+                      <div class="small-help">Generated and stored once. Used as supplier ID on invoices.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tax Information -->
+              <div class="col-lg-4">
+                <div class="card card-border shadow-sm h-100">
+                  <div class="card-body">
+                    <div class="bucket-title mb-1"><i class="fas fa-receipt me-2"></i>Tax Information</div>
+                    <div class="bucket-sub mb-3">Identifiers needed for France / EU invoicing</div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">SIREN</label>
+                      <input type="text" class="form-control" name="siren" value="{{ company.siren or '' }}" placeholder="9 digits">
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">SIRET</label>
+                      <input type="text" class="form-control" name="siret" value="{{ company.siret or '' }}" placeholder="14 digits">
+                    </div>
+
+                    <div class="mb-0">
+                      <label class="muted-label">VAT ID</label>
+                      <input type="text" class="form-control" value="{{ company.vat_number or '' }}" name="vat_number" readonly>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="col-lg-4">
+                <div class="card card-border shadow-sm h-100">
+                  <div class="card-body">
+                    <div class="bucket-title mb-1"><i class="fas fa-address-book me-2"></i>Contact Information</div>
+                    <div class="bucket-sub mb-3">Shown on invoices and used for operational communication</div>
+
+                    <div class="mb-3">
+                      <label class="muted-label">Invoice Contact Email</label>
+                      <input type="email" class="form-control" name="invoice_email" value="{{ company.invoice_email or '' }}" placeholder="billing@yourcompany.com">
+                    </div>
+
+                    <div class="mb-0">
+                      <label class="muted-label">Invoice Contact Phone</label>
+                      <input type="text" class="form-control" name="invoice_phone" value="{{ company.invoice_phone or '' }}" placeholder="+33 ...">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Fields BELOW -->
+          <div class="col-12">
+            <div class="card card-border shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="section-title mb-0"><i class="fas fa-list-check me-2"></i>Additional Fields</h6>
+                  <button type="button" class="btn btn-sm btn-outline-secondary repeater-add" onclick="addCustomField('profile')">+ Add Field</button>
+                </div>
+                <div id="profileCustomFields" class="vstack gap-2"></div>
+                <div class="small-help mt-2">Add extra identifiers (e.g., EORI, Registry No., DUNS).</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- BILL/SHIP TAB -->
+      {% set bill_addrs = company.addresses|selectattr('type','equalto','BILLING')|list %}
+      {% set ship_addrs = company.addresses|selectattr('type','equalto','SHIPPING')|list %}
+      {% set primary_bill = bill_addrs[0] if bill_addrs|length > 0 else None %}
+      {% set secondary_bill = bill_addrs[1] if bill_addrs|length > 1 else None %}
+      {% set primary_ship = ship_addrs[0] if ship_addrs|length > 0 else None %}
+      {% set secondary_ship = ship_addrs[1] if ship_addrs|length > 1 else None %}
+      {% set ns = namespace(used_ids=[]) %}
+      {% if primary_bill %}{% set _ = ns.used_ids.append(primary_bill.id) %}{% endif %}
+      {% if secondary_bill %}{% set _ = ns.used_ids.append(secondary_bill.id) %}{% endif %}
+      {% if primary_ship %}{% set _ = ns.used_ids.append(primary_ship.id) %}{% endif %}
+      {% if secondary_ship %}{% set _ = ns.used_ids.append(secondary_ship.id) %}{% endif %}
+      {% set extra_addrs = [] %}
+      {% for a in company.addresses %}{% if a.id not in ns.used_ids %}{% set _ = extra_addrs.append(a) %}{% endif %}{% endfor %}
+
+      <div class="tab-pane fade" id="tab-billship" role="tabpanel" aria-labelledby="billship-tab">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card card-border shadow-sm">
+              <div class="card-body">
+                <h6 class="section-title mb-2"><i class="fas fa-map-marker-alt me-2"></i>Primary Bill/Ship</h6>
+                <div class="small-help mb-2">Primary locations used by default on invoices.</div>
+                <!-- Primary BILL FROM (index 0) -->
+                <div class="address-card billing mb-2">
+                  <span class="address-type-badge">Bill From</span>
+                  <div class="row g-2 pt-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Label</label>
+                      <input type="text" class="form-control" name="addresses[0][label]" value="{{ primary_bill.label if primary_bill else 'Primary Billing' }}">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Country</label>
+                      <select class="form-select" name="addresses[0][country]">
+                        {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
+                        {% for cc in eu %}<option value="{{ cc }}" {% if (primary_bill and primary_bill.country==cc) or (not primary_bill and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 1</label>
+                      <input type="text" class="form-control" name="addresses[0][line1]" value="{{ primary_bill.address_line1 if primary_bill else '' }}" required>
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 2</label>
+                      <input type="text" class="form-control" name="addresses[0][line2]" value="{{ primary_bill.address_line2 if primary_bill else '' }}">
+                    </div>
+                    <div class="col-md-5">
+                      <label class="muted-label">Postal Code</label>
+                      <input type="text" class="form-control" name="addresses[0][zip]" value="{{ primary_bill.zip_code if primary_bill else '' }}">
+                    </div>
+                    <div class="col-md-7">
+                      <label class="muted-label">City</label>
+                      <input type="text" class="form-control" name="addresses[0][city]" value="{{ primary_bill.city if primary_bill else '' }}">
+                    </div>
+                  </div>
+                  <input type="hidden" name="addresses[0][type]" value="BILLING">
+                  <input type="hidden" name="addresses[0][id]" value="{{ primary_bill.id if primary_bill else 'new' }}">
+                </div>
+                <!-- Primary SHIP FROM (index 1) -->
+                <div class="address-card shipping">
+                  <span class="address-type-badge">Ship From</span>
+                  <div class="row g-2 pt-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Label</label>
+                      <input type="text" class="form-control" name="addresses[1][label]" value="{{ primary_ship.label if primary_ship else 'Primary Shipping' }}">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Country</label>
+                      <select class="form-select" name="addresses[1][country]">
+                        {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
+                        {% for cc in eu %}<option value="{{ cc }}" {% if (primary_ship and primary_ship.country==cc) or (not primary_ship and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 1</label>
+                      <input type="text" class="form-control" name="addresses[1][line1]" value="{{ primary_ship.address_line1 if primary_ship else '' }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 2</label>
+                      <input type="text" class="form-control" name="addresses[1][line2]" value="{{ primary_ship.address_line2 if primary_ship else '' }}">
+                    </div>
+                    <div class="col-md-5">
+                      <label class="muted-label">Postal Code</label>
+                      <input type="text" class="form-control" name="addresses[1][zip]" value="{{ primary_ship.zip_code if primary_ship else '' }}">
+                    </div>
+                    <div class="col-md-7">
+                      <label class="muted-label">City</label>
+                      <input type="text" class="form-control" name="addresses[1][city]" value="{{ primary_ship.city if primary_ship else '' }}">
+                    </div>
+                  </div>
+                  <input type="hidden" name="addresses[1][type]" value="SHIPPING">
+                  <input type="hidden" name="addresses[1][id]" value="{{ primary_ship.id if primary_ship else 'new' }}">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="card card-border shadow-sm">
+              <div class="card-body">
+                <h6 class="section-title mb-2"><i class="fas fa-warehouse me-2"></i>Secondary Bill/Ship</h6>
+                <div class="small-help mb-2">Optional secondary locations (branch / warehouse).</div>
+                <!-- Secondary BILL FROM (index 2) -->
+                <div class="address-card billing mb-2">
+                  <span class="address-type-badge">Bill From</span>
+                  <div class="row g-2 pt-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Label</label>
+                      <input type="text" class="form-control" name="addresses[2][label]" value="{{ secondary_bill.label if secondary_bill else 'Secondary Billing' }}">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Country</label>
+                      <select class="form-select" name="addresses[2][country]">
+                        {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
+                        {% for cc in eu %}<option value="{{ cc }}" {% if (secondary_bill and secondary_bill.country==cc) or (not secondary_bill and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 1</label>
+                      <input type="text" class="form-control" name="addresses[2][line1]" value="{{ secondary_bill.address_line1 if secondary_bill else '' }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 2</label>
+                      <input type="text" class="form-control" name="addresses[2][line2]" value="{{ secondary_bill.address_line2 if secondary_bill else '' }}">
+                    </div>
+                    <div class="col-md-5">
+                      <label class="muted-label">Postal Code</label>
+                      <input type="text" class="form-control" name="addresses[2][zip]" value="{{ secondary_bill.zip_code if secondary_bill else '' }}">
+                    </div>
+                    <div class="col-md-7">
+                      <label class="muted-label">City</label>
+                      <input type="text" class="form-control" name="addresses[2][city]" value="{{ secondary_bill.city if secondary_bill else '' }}">
+                    </div>
+                  </div>
+                  <input type="hidden" name="addresses[2][type]" value="BILLING">
+                  <input type="hidden" name="addresses[2][id]" value="{{ secondary_bill.id if secondary_bill else 'new' }}">
+                </div>
+                <!-- Secondary SHIP FROM (index 3) -->
+                <div class="address-card shipping">
+                  <span class="address-type-badge">Ship From</span>
+                  <div class="row g-2 pt-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Label</label>
+                      <input type="text" class="form-control" name="addresses[3][label]" value="{{ secondary_ship.label if secondary_ship else 'Secondary Shipping' }}">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Country</label>
+                      <select class="form-select" name="addresses[3][country]">
+                        {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
+                        {% for cc in eu %}<option value="{{ cc }}" {% if (secondary_ship and secondary_ship.country==cc) or (not secondary_ship and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 1</label>
+                      <input type="text" class="form-control" name="addresses[3][line1]" value="{{ secondary_ship.address_line1 if secondary_ship else '' }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="muted-label">Address Line 2</label>
+                      <input type="text" class="form-control" name="addresses[3][line2]" value="{{ secondary_ship.address_line2 if secondary_ship else '' }}">
+                    </div>
+                    <div class="col-md-5">
+                      <label class="muted-label">Postal Code</label>
+                      <input type="text" class="form-control" name="addresses[3][zip]" value="{{ secondary_ship.zip_code if secondary_ship else '' }}">
+                    </div>
+                    <div class="col-md-7">
+                      <label class="muted-label">City</label>
+                      <input type="text" class="form-control" name="addresses[3][city]" value="{{ secondary_ship.city if secondary_ship else '' }}">
+                    </div>
+                  </div>
+                  <input type="hidden" name="addresses[3][type]" value="SHIPPING">
+                  <input type="hidden" name="addresses[3][id]" value="{{ secondary_ship.id if secondary_ship else 'new' }}">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add more (limit to 2 additions) -->
+          <div class="col-12">
+            <div class="card card-border shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="section-title mb-0"><i class="fas fa-plus me-2"></i>Add More Bill From / Ship From</h6>
+                  <div class="d-flex gap-2">
+                    <button type="button" id="addMoreBillBtn" class="btn btn-sm btn-outline-primary" onclick="addExtraAddress('BILLING')">+ Add Bill From</button>
+                    <button type="button" id="addMoreShipBtn" class="btn btn-sm btn-outline-success" onclick="addExtraAddress('SHIPPING')">+ Add Ship From</button>
+                  </div>
+                </div>
+                <div class="small-help mb-2">You can add up to <b>2</b> additional addresses in total.</div>
+                <div id="extraAddressContainer" class="vstack gap-2">
+                  {% for addr in extra_addrs %}
+                  <div class="address-card {% if addr.type == 'BILLING' %}billing{% else %}shipping{% endif %}">
+                    <span class="address-type-badge">{{ 'Bill From' if addr.type == 'BILLING' else 'Ship From' }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-row" onclick="removeExtraAddress(this)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                    {% set idx = 4 + loop.index0 %}
+                    <div class="row g-2 pt-2">
+                      <div class="col-md-3">
+                        <label class="muted-label">Type</label>
+                        <select class="form-select" name="addresses[{{ idx }}][type]" onchange="toggleExtraAddressStyling(this)">
+                          <option value="BILLING" {% if addr.type=='BILLING' %}selected{% endif %}>Bill From</option>
+                          <option value="SHIPPING" {% if addr.type=='SHIPPING' %}selected{% endif %}>Ship From</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="muted-label">Label</label>
+                        <input type="text" class="form-control" name="addresses[{{ idx }}][label]" value="{{ addr.label or '' }}">
+                      </div>
+                      <div class="col-md-5">
+                        <label class="muted-label">Address Line 1</label>
+                        <input type="text" class="form-control" name="addresses[{{ idx }}][line1]" value="{{ addr.address_line1 or '' }}">
+                      </div>
+                      <div class="col-md-5">
+                        <label class="muted-label">Address Line 2</label>
+                        <input type="text" class="form-control" name="addresses[{{ idx }}][line2]" value="{{ addr.address_line2 or '' }}">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="muted-label">Postal Code</label>
+                        <input type="text" class="form-control" name="addresses[{{ idx }}][zip]" value="{{ addr.zip_code or '' }}">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="muted-label">City</label>
+                        <input type="text" class="form-control" name="addresses[{{ idx }}][city]" value="{{ addr.city or '' }}">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="muted-label">Country</label>
+                        <select class="form-select" name="addresses[{{ idx }}][country]">
+                          {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
+                          {% for cc in eu %}<option value="{{ cc }}" {% if addr.country==cc %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                        </select>
+                      </div>
+                    </div>
+                    <input type="hidden" name="addresses[{{ idx }}][id]" value="{{ addr.id }}">
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div class="tab-pane fade" id="tab-settings" role="tabpanel" aria-labelledby="settings-tab">
+        <div class="row g-4">
+          <!-- Invoice settings -->
+          <div class="col-lg-6">
+            <div class="card card-border shadow-sm h-100">
+              <div class="card-body">
+                <h6 class="section-title mb-3"><i class="fas fa-file-invoice me-2"></i>Invoice Settings</h6>
+
+                <!-- Numbering mode -->
+                {% set numbering_mode = (company.numbering_mode or 'AUTO') if company.numbering_mode is defined else 'AUTO' %}
+                <div class="mb-2">
+                  <label class="muted-label d-block mb-1">Invoice Numbering</label>
+                  <div class="d-flex align-items-center gap-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="numbering_mode" id="modeAuto" value="AUTO" {% if numbering_mode == 'AUTO' %}checked{% endif %} onclick="updateNumberingModeUI()">
+                      <label class="form-check-label" for="modeAuto">Auto</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="numbering_mode" id="modeManual" value="MANUAL" {% if numbering_mode == 'MANUAL' %}checked{% endif %} onclick="updateNumberingModeUI()">
+                      <label class="form-check-label" for="modeManual">Manual</label>
+                    </div>
+                  </div>
+                  <div class="small-help mt-1">Switch anytime between Auto and Manual. Changes apply to future invoices.</div>
+                </div>
+
+                <!-- Auto section -->
+                <div id="autoSection">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Fiscal Year</label>
+                      <!-- CRITICAL: keep name=fiscal_year so backend can save -->
+                      <select name="fiscal_year" id="autoFiscalYear" class="form-select" onchange="updateInvoicePreview()">
+                        {% for yr in range(2023, 2032) %}
+                        <option value="{{ yr }}" {% if company.fiscal_year==yr %}selected{% endif %}>{{ yr }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Invoice Prefix</label>
+                      <!-- CRITICAL: keep name=invoice_prefix -->
+                      <input type="text" name="invoice_prefix" id="autoPrefix" class="form-control" value="{{ company.invoice_prefix or 'INV' }}" oninput="updateInvoicePreview()">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Suffix (Next Number, max 6 digits)</label>
+                      <!-- CRITICAL: keep name=starting_invoice_number -->
+                      <input type="number" name="starting_invoice_number" id="autoSuffix" class="form-control" value="{{ company.starting_invoice_number or 1001 }}" min="0" max="999999" oninput="limitSuffixDigits(this); updateInvoicePreview()">
+                      <div class="small-help">Auto-increments by +1 for each new invoice.</div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                      <div class="preview-box w-100" id="autoPreview">Next: —</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Manual section -->
+                <div id="manualSection" class="mt-3">
+                  <label class="muted-label d-block mb-1">Manual Number Entry</label>
+                  <div class="small-help">
+                    Manual mode allows alphanumeric invoice numbers with “/” or “-” and spaces, up to 12 characters, entered directly in the invoice creation screen.
+                  </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="muted-label">Payment Terms (days)</label>
+                    <!-- CRITICAL: keep name=payment_terms -->
+                    <input type="number" name="payment_terms" class="form-control" value="{{ company.payment_terms or 30 }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="muted-label">Default Currency</label>
+                    <!-- CRITICAL: keep name=currency -->
+                    <select name="currency" class="form-select">
+                      <option value="EUR" {% if company.currency=='EUR' %}selected{% endif %}>EUR (€)</option>
+                      <option value="GBP" {% if company.currency=='GBP' %}selected{% endif %}>GBP (£)</option>
+                      <option value="USD" {% if company.currency=='USD' %}selected{% endif %}>USD ($)</option>
+                      <option value="CHF" {% if company.currency=='CHF' %}selected{% endif %}>CHF (Fr)</option>
+                      <option value="SEK" {% if company.currency=='SEK' %}selected{% endif %}>SEK (kr)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="mt-3">
+                  <h6 class="section-title mb-2"><i class="fas fa-plug me-2"></i>France E-Invoicing (Supplier)</h6>
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="muted-label">Default E-Invoice Channel</label>
+                      <select name="einvoice_channel" class="form-select">
+                        <option value="PDP" {% if (company.einvoice_channel or 'PDP') == 'PDP' %}selected{% endif %}>PDP</option>
+                        <option value="PPF" {% if company.einvoice_channel == 'PPF' %}selected{% endif %}>PPF</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="muted-label">Preferred Format</label>
+                      <select name="einvoice_format" class="form-select">
+                        <option value="FACTURX" {% if (company.einvoice_format or 'FACTURX') == 'FACTURX' %}selected{% endif %}>Factur-X</option>
+                        <option value="UBL" {% if company.einvoice_format == 'UBL' %}selected{% endif %}>UBL 2.1</option>
+                        <option value="CII" {% if company.einvoice_format == 'CII' %}selected{% endif %}>CII (UN/CEFACT)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Bank + Terms & Notes (compact, stacked) -->
+          <div class="col-lg-6">
+            <div class="card card-border shadow-sm compact-card h-100">
+              <div class="card-body">
+                <h6 class="section-title mb-2"><i class="fas fa-university me-2"></i>Bank Settings</h6>
+
+                <!-- Bank accounts list: Show existing ones or nothing -->
+                <div id="bankContainer" class="vstack">
+                  {% if company.bank_accounts and company.bank_accounts|length > 0 %}
+                    {% for ba in company.bank_accounts %}
+                    <div class="bank-entry position-relative">
+                      <input type="hidden" name="accounts[{{ loop.index0 }}][id]" value="{{ ba.id or 'new' }}">
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-row position-absolute" onclick="this.closest('.bank-entry').remove()">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                      <div class="row g-2">
+                        <div class="col-md-6">
+                          <label class="muted-label">Account Holder</label>
+                          <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][account_holder]" value="{{ ba.account_holder or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="muted-label">Bank Name</label>
+                          <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][bank_name]" value="{{ ba.bank_name or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="muted-label">IBAN</label>
+                          <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][iban]" value="{{ ba.iban or '' }}" placeholder="DE89 3704 0044 0532 0130 00">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="muted-label">BIC / SWIFT</label>
+                          <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][bic]" value="{{ ba.bic or '' }}" placeholder="DEUTDEBBXXX">
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  {% else %}
+                    <!-- NO DEFAULT EMPTY ENTRY - will be added by JavaScript when needed -->
+                  {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addBankAccount()">+ Add Bank Account</button>
+                  <span class="small-help">Click to add a bank account. Empty accounts will not be saved.</span>
+                </div>
+
+                <!-- Terms & Notes BELOW bank details -->
+                <div class="mt-3">
+                  <h6 class="section-title mb-2"><i class="fas fa-scale-balanced me-2"></i>Terms & Conditions</h6>
+                  <textarea name="default_terms" class="form-control" rows="4" placeholder="EU-compliant payment terms, late payment interest (Directive 2011/7/EU), jurisdiction, retention of title, GDPR clauses...">{{ company.default_terms or '' }}</textarea>
+                </div>
+
+                <div class="mt-3">
+                  <h6 class="section-title mb-2"><i class="fas fa-comment-dots me-2"></i>Customer Notes</h6>
+                  <textarea name="default_notes" class="form-control" rows="3" placeholder="Message to appear on invoices (e.g., thank you note, support contact).">{{ company.default_notes or '' }}</textarea>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+<script>
+  // Preview logo
+  const logoInput = document.getElementById('logoInput');
+  if (logoInput) {
+    logoInput.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = document.getElementById('logoPreview');
+        img.src = ev.target.result;
+        img.style.display = 'block';
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  // Custom fields (flexible)
+  let customProfileIdx = 0, customSettingsIdx = 0;
+  function addCustomField(scope) {
+    const container = scope === 'profile' ? document.getElementById('profileCustomFields')
+                                          : document.getElementById('settingsCustomFields');
+    const idx = scope === 'profile' ? customProfileIdx++ : customSettingsIdx++;
+    const nameAttr = scope === 'profile' ? `profile_custom[${idx}]` : `settings_custom[${idx}]`;
+    const row = document.createElement('div');
+    row.className = 'row g-2 align-items-center';
+    row.innerHTML = `
+      <div class="col-5"><input type="text" class="form-control" name="${nameAttr}[key]" placeholder="Field name (e.g., EORI)"></div>
+      <div class="col-6"><input type="text" class="form-control" name="${nameAttr}[value]" placeholder="Value"></div>
+      <div class="col-1 text-end"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>
+    `;
+    container.appendChild(row);
+  }
+
+  // Bank accounts repeater (compact, auto-expanding)
+  let bankIdx = {{ company.bank_accounts|length if company.bank_accounts else 0 }};
+  function addBankAccount() {
+    const c = document.getElementById('bankContainer');
+    const box = document.createElement('div');
+    box.className = 'bank-entry position-relative';
+    box.innerHTML = `
+      <input type="hidden" name="accounts[${bankIdx}][id]" value="new">
+      <button type="button" class="btn btn-sm btn-outline-danger remove-row position-absolute" onclick="this.closest('.bank-entry').remove()">
+        <i class="fas fa-trash"></i>
+      </button>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label class="muted-label">Account Holder</label>
+          <input type="text" class="form-control" name="accounts[${bankIdx}][account_holder]">
+        </div>
+        <div class="col-md-6">
+          <label class="muted-label">Bank Name</label>
+          <input type="text" class="form-control" name="accounts[${bankIdx}][bank_name]">
+        </div>
+        <div class="col-md-6">
+          <label class="muted-label">IBAN</label>
+          <input type="text" class="form-control" name="accounts[${bankIdx}][iban]" placeholder="DE89 3704 0044 0532 0130 00">
+        </div>
+        <div class="col-md-6">
+          <label class="muted-label">BIC / SWIFT</label>
+          <input type="text" class="form-control" name="accounts[${bankIdx}][bic]" placeholder="DEUTDEBBXXX">
+        </div>
+      </div>
+    `;
+    c.appendChild(box);
+    bankIdx++;
+  }
+
+  // Extra address additions (limit 2)
+  let extraAddLimit = 2;
+  let extraAddedCount = {{ extra_addrs|length if extra_addrs is defined else 0 }};
+  let addrIndex = 4 + ({{ extra_addrs|length if extra_addrs is defined else 0 }});
+  function refreshExtraButtons() {
+    const disable = extraAddedCount >= extraAddLimit;
+    const b1 = document.getElementById('addMoreBillBtn');
+    const b2 = document.getElementById('addMoreShipBtn');
+    if (b1) b1.disabled = disable;
+    if (b2) b2.disabled = disable;
+  }
+  refreshExtraButtons();
+
+  function euCountryOptions(selected) {
+    const eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
+    return eu.map(cc => `<option value="${cc}" ${selected===cc?'selected':''}>${cc}</option>`).join('');
+  }
+
+  function addExtraAddress(kind) {
+    if (extraAddedCount >= extraAddLimit) return;
+    const container = document.getElementById('extraAddressContainer');
+    if (!container) return;
+    const cls = (kind === 'BILLING') ? 'billing' : 'shipping';
+    const badge = (kind === 'BILLING') ? 'Bill From' : 'Ship From';
+    const html = `
+      <div class="address-card ${cls}">
+        <span class="address-type-badge">${badge}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-row" onclick="removeExtraAddress(this)">
+          <i class="fas fa-trash"></i>
+        </button>
+        <div class="row g-2 pt-2">
+          <div class="col-md-3">
+            <label class="muted-label">Type</label>
+            <select class="form-select" name="addresses[${addrIndex}][type]" onchange="toggleExtraAddressStyling(this)">
+              <option value="BILLING" ${kind==='BILLING'?'selected':''}>Bill From</option>
+              <option value="SHIPPING" ${kind==='SHIPPING'?'selected':''}>Ship From</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="muted-label">Label</label>
+            <input type="text" class="form-control" name="addresses[${addrIndex}][label]" placeholder="Branch / Warehouse">
+          </div>
+          <div class="col-md-5">
+            <label class="muted-label">Address Line 1</label>
+            <input type="text" class="form-control" name="addresses[${addrIndex}][line1]">
+          </div>
+          <div class="col-md-5">
+            <label class="muted-label">Address Line 2</label>
+            <input type="text" class="form-control" name="addresses[${addrIndex}][line2]">
+          </div>
+          <div class="col-md-3">
+            <label class="muted-label">Postal Code</label>
+            <input type="text" class="form-control" name="addresses[${addrIndex}][zip]">
+          </div>
+          <div class="col-md-4">
+            <label class="muted-label">City</label>
+            <input type="text" class="form-control" name="addresses[${addrIndex}][city]">
+          </div>
+          <div class="col-md-4">
+            <label class="muted-label">Country</label>
+            <select class="form-select" name="addresses[${addrIndex}][country]">
+              ${euCountryOptions('FR')}
+            </select>
+          </div>
+        </div>
+        <input type="hidden" name="addresses[${addrIndex}][id]" value="new">
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+    addrIndex++; extraAddedCount++; refreshExtraButtons();
+  }
+
+  function toggleExtraAddressStyling(sel) {
+    const card = sel.closest('.address-card');
+    if (!card) return;
+    const badge = card.querySelector('.address-type-badge');
+    if (sel.value === 'SHIPPING') {
+      card.classList.remove('billing'); card.classList.add('shipping'); if (badge) badge.textContent = 'Ship From';
+    } else {
+      card.classList.remove('shipping'); card.classList.add('billing'); if (badge) badge.textContent = 'Bill From';
+    }
+  }
+  function removeExtraAddress(btn) {
+    const card = btn.closest('.address-card');
+    if (card) card.remove();
+    if (extraAddedCount > 0) extraAddedCount--; refreshExtraButtons();
+  }
+
+  // Numbering mode UI + Preview
+  function pad6(n) { const v = parseInt(n, 10); if (isNaN(v) || v < 0) return '000001'; return String(v).padStart(6, '0'); }
+  function limitSuffixDigits(el) { if (!el) return; const v = parseInt(el.value || 0, 10); if (v > 999999) el.value = 999999; if (v < 0) el.value = 0; }
+  function updateInvoicePreview() {
+    const prefix = document.getElementById('autoPrefix')?.value || 'INV';
+    const fy = document.getElementById('autoFiscalYear')?.value || new Date().getFullYear();
+    const suffix = document.getElementById('autoSuffix')?.value || 1;
+    const box = document.getElementById('autoPreview');
+    if (box) box.textContent = `Next: ${prefix}-${fy}-${pad6(suffix)}`;
+  }
+  function updateNumberingModeUI() {
+    const isAuto = document.getElementById('modeAuto')?.checked;
+    ['autoFiscalYear','autoPrefix','autoSuffix'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.disabled = !isAuto;
+    });
+    const autoSec = document.getElementById('autoSection'); const manualSec = document.getElementById('manualSection');
+    if (autoSec) autoSec.style.opacity = isAuto ? '1' : '0.5';
+    if (manualSec) manualSec.style.opacity = isAuto ? '0.6' : '1';
+    updateInvoicePreview();
+  }
+  document.addEventListener('DOMContentLoaded', function () { updateNumberingModeUI(); updateInvoicePreview(); });
+</script>
+{% endblock %}

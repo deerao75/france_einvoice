@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="content-area" style="--ui-scale: 1.15;">
+    <!-- EVERYTHING on the right side goes inside this div -->
+
+    <style>
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* Scales only the right content area */
+        .content-area{
+            font-size: calc(1rem * var(--ui-scale, 1.15));
+        }
+
+        .status-draft {
+            background-color: #b56727;
+            color: #ffffff;
+        }
+
+        .status-final {
+            background-color: #d4edda;
+            color:  #155724;
+        }
+
+        .status-paid {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        . status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .invoice-table th {
+            background-color: #343a40 !important;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .invoice-table td {
+            vertical-align: middle;
+        }
+
+        .amount-cell {
+            font-weight: 600;
+            font-family: 'Courier New', monospace ! important;
+        }
+
+        . summary-card {
+            border: none;
+            border-radius: 10px;
+        }
+
+        /* FIX: Allow dropdown to overflow outside table */
+        .table-responsive {
+            overflow:  visible ! important;
+        }
+
+        .invoice-table {
+            overflow:  visible !important;
+        }
+
+        .invoice-table tbody {
+            overflow:  visible !important;
+        }
+
+        .invoice-table td: last-child {
+            overflow: visible !important;
+        }
+
+        /* Dropdown positioning */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute ! important;
+            z-index: 9999 !important;
+            min-width: 180px;
+            padding: 8px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid #e0e0e0;
+            background:  #fff;
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Button Styling */
+        .btn-edit {
+            background-color:  #0d6efd;
+            border-color: #0d6efd;
+            color: #fff;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .btn-edit:hover {
+            background-color:  #0b5ed7;
+            border-color: #0a58ca;
+            color: #fff;
+        }
+
+        .btn-action {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: #fff;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size:  14px;
+        }
+
+        .btn-action:hover {
+            background-color: #5c636a;
+            border-color:  #565e64;
+            color: #fff;
+        }
+
+        /* Action cell */
+        .action-cell {
+            white-space: nowrap;
+        }
+
+    </style>
+</div>
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-black m-0">Invoice Dashboard</h2>
+            <p class="text-black-50 mb-0">Manage your invoices - drafts and finalized</p>
+        </div>
+        <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange btn-lg px-4 fw-bold shadow-sm">
+            + New Invoice
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Total Invoices</p>
+                            <h3 class="fw-bold mb-0">{{ invoices|length }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <span style="font-size: 24px;">📄</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Drafts</p>
+                            <h3 class="fw-bold mb-0 text-warning">
+                                {% set draft_count = [] %}
+                                {% for inv in invoices %}
+                                    {% if inv.status.value == 'DRAFT' %}
+                                        {% set _ = draft_count.append(1) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ draft_count|length }}
+                            </h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <span style="font-size: 24px;">✏️</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Finalized</p>
+                            <h3 class="fw-bold mb-0 text-success">
+                                {% set final_count = [] %}
+                                {% for inv in invoices %}
+                                    {% if inv.status.value == 'SENT' %}
+                                        {% set _ = final_count.append(1) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ final_count|length }}
+                            </h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <span style="font-size: 24px;">✅</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Total Value</p>
+                            <h3 class="fw-bold mb-0">
+                                {% set total_value = [] %}
+                                {% for inv in invoices %}
+                                    {% set _ = total_value.append(inv.total_gross or 0) %}
+                                {% endfor %}
+                                €{{ "%.2f"|format(total_value|sum) }}
+                            </h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <span style="font-size: 24px;">💶</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">All Invoices</h5>
+            <div class="d-flex gap-2">
+                <select class="form-select form-select-sm" id="statusFilter" onchange="filterInvoices()" style="width: 160px;">
+                    <option value="all">All Status</option>
+                    <option value="DRAFT">Drafts Only</option>
+                    <option value="SENT">Finalized Only</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if invoices %}
+            <div class="table-responsive">
+                <table class="table table-hover invoice-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 p-3">Invoice #</th>
+                            <th class="p-3">Date</th>
+                            <th class="p-3">Customer</th>
+                            <th class="p-3">Due Date</th>
+                            <th class="p-3 text-end">Net Amount</th>
+                            <th class="p-3 text-end">Tax</th>
+                            <th class="p-3 text-end">Total</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-center pe-4" style="min-width: 220px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr class="invoice-row" data-status="{{ inv.status.value }}">
+                            <td class="ps-4 p-3">
+                                <span class="fw-bold text-primary">{{ inv.invoice_number }}</span>
+                            </td>
+                            <td class="p-3">
+                                {% if inv.invoice_date %}
+                                    {{ inv.invoice_date.strftime('%d %b %Y') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="p-3">
+                                <div class="fw-semibold">
+                                    {% if inv.customer %}
+                                        {{ inv.customer.name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                                {% if inv. customer_vat %}
+                                <small class="text-muted">VAT: {{ inv.customer_vat }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="p-3">
+                                {% if inv.due_date %}
+                                    {{ inv.due_date.strftime('%d %b %Y') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-end amount-cell">€{{ "%.2f"|format(inv.total_net or 0) }}</td>
+                            <td class="p-3 text-end amount-cell text-danger">€{{ "%.2f"|format(inv.total_tax or 0) }}</td>
+                            <td class="p-3 text-end amount-cell fw-bold">€{{ "%.2f"|format(inv.total_gross or 0) }}</td>
+                            <td class="p-3 text-center">
+                                {% if inv.status. value == 'DRAFT' %}
+                                    <span class="status-badge status-draft">Draft</span>
+                                {% elif inv.status.value == 'SENT' %}
+                                    <span class="status-badge status-final">Final</span>
+                                {% elif inv.status.value == 'PAID' %}
+                                    <span class="status-badge status-paid">Paid</span>
+                                {% elif inv.status.value == 'CANCELLED' %}
+                                    <span class="status-badge status-cancelled">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ inv.status.value }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-center pe-4 action-cell">
+                                <!-- Edit Button -->
+                                <a href="{{ url_for('invoices.edit', id=inv.id) }}" class="btn btn-edit">
+                                    Edit
+                                </a>
+
+                                <!-- Actions Dropdown -->
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-action dropdown-toggle" type="button" id="actionMenu{{ inv.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <!-- Actions Dropdown (replace items inside existing dropdown) -->
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionMenu{{ inv.id }}">
+                                      <li><a class="dropdown-item" href="{{ url_for('invoices.view', id=inv.id) }}">View Invoice</a></li>
+                                      <li><a class="dropdown-item" href="{{ url_for('invoices.print_invoice', id=inv.id) }}">Print</a></li>
+                                      <li><a class="dropdown-item" href="{{ url_for('invoices.pdf', id=inv.id) }}">Download PDF</a></li>
+                                      <li><hr class="dropdown-divider"></li>
+                                      <li><a class="dropdown-item" href="{{ url_for('invoices.duplicate', id=inv.id) }}">Duplicate</a></li>
+                                      <li><a class="dropdown-item" href="#">Send Email</a></li>
+                                      {% if inv.status.value == 'DRAFT' %}
+                                      <li><hr class="dropdown-divider"></li>
+                                      <li>
+                                        <a class="dropdown-item text-danger" href="{{ url_for('invoices.delete', id=inv.id) }}" onclick="return confirm('Are you sure you want to delete this draft invoice?')">
+                                          Delete
+                                        </a>
+                                      </li>
+                                      {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <span style="font-size: 64px;">📄</span>
+                </div>
+                <h5 class="text-muted">No invoices yet</h5>
+                <p class="text-muted mb-4">Create your first invoice to get started</p>
+                <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange">
+                    + Create Invoice
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function filterInvoices() {
+        var filter = document.getElementById('statusFilter').value;
+        var rows = document.querySelectorAll('.invoice-row');
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (filter === 'all' || row.getAttribute('data-status') === filter) {
+                row. style.display = '';
+            } else {
+                row.style. display = 'none';
+            }
+        }
+    }
+</script>
+{% endblock %}

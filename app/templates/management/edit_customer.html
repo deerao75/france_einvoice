@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .form-label { font-weight: 700; color: #333; }
+    .section-header {
+        background: #f8f9fa; border-bottom: 2px solid #ddd;
+        padding: 10px 15px; margin-bottom: 20px;
+        font-weight: 800; color: #d35400;
+    }
+    .address-card {
+        border: 1px solid #dee2e6; background: #fff;
+        padding: 15px; margin-bottom: 15px; border-radius: 6px;
+        position: relative;
+    }
+</style>
+
+<div class="container-fluid py-4" style="max-width: 1600px;">
+    <form method="POST">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold m-0">Edit Customer</h2>
+                <span class="badge bg-secondary fs-6">ID: {{ customer.customer_ref_id }}</span>
+            </div>
+            <div>
+                <a href="{{ url_for('management.customers_list') }}" class="btn btn-lg btn-outline-secondary me-2">Cancel</a>
+                <button type="submit" class="btn btn-lg btn-primary-orange px-5 fw-bold">Update Customer</button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- GENERAL INFO -->
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="section-header"><i class="fas fa-info-circle me-2"></i>General Information</div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Customer Name *</label>
+                                <input type="text" name="name" class="form-control" value="{{ customer.name }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">VAT Treatment</label>
+                                <select name="vat_treatment" class="form-select">
+                                    <option value="registered" {% if customer.vat_treatment == 'registered' %}selected{% endif %}>Registered Business</option>
+                                    <option value="unregistered" {% if customer.vat_treatment == 'unregistered' %}selected{% endif %}>Unregistered</option>
+                                    <option value="consumer" {% if customer.vat_treatment == 'consumer' %}selected{% endif %}>Consumer</option>
+                                    <option value="export" {% if customer.vat_treatment == 'export' %}selected{% endif %}>Export</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">VAT Number</label>
+                                <input type="text" name="vat_number" class="form-control" value="{{ customer.vat_number or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">SIRET</label>
+                                <input type="text" name="siret" class="form-control" value="{{ customer.siret or '' }}">
+                            </div>
+
+                            <!-- ADDED: SIREN -->
+                            <div class="col-md-3">
+                                <label class="form-label">SIREN</label>
+                                <input type="text" name="siren" class="form-control" value="{{ customer.siren or '' }}" placeholder="9 digits">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" value="{{ customer.email or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="phone" class="form-control" value="{{ customer.phone or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Terms</label>
+                                <select name="payment_terms" class="form-select">
+                                    <option value="ON_RECEIPT" {% if customer.payment_terms == 'ON_RECEIPT' %}selected{% endif %}>Due on Receipt</option>
+                                    <option value="30_DAYS" {% if customer.payment_terms == '30_DAYS' %}selected{% endif %}>30 Days Net</option>
+                                </select>
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- ADDED: Buyer E-Invoicing Details (France-aligned) -->
+                            <!-- ========================= -->
+                            <div class="col-12 mt-3">
+                                <div class="section-header" style="margin-bottom: 10px;">
+                                    <i class="fas fa-building me-2"></i>Buyer (Customer) E-Invoicing Details
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Buyer Type</label>
+                                <select name="buyer_type" class="form-select">
+                                    <option value="B2B" {% if (customer.buyer_type or 'B2B') == 'B2B' %}selected{% endif %}>Domestic B2B</option>
+                                    <option value="B2C" {% if customer.buyer_type == 'B2C' %}selected{% endif %}>B2C</option>
+                                    <option value="EXPORT" {% if customer.buyer_type == 'EXPORT' %}selected{% endif %}>Export</option>
+                                    <option value="INTRA_EU" {% if customer.buyer_type == 'INTRA_EU' %}selected{% endif %}>Intra-EU</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Invoice Delivery Channel</label>
+                                <select name="delivery_channel" class="form-select">
+                                    <option value="PDP" {% if (customer.delivery_channel or 'PDP') == 'PDP' %}selected{% endif %}>PDP</option>
+                                    <option value="PPF" {% if customer.delivery_channel == 'PPF' %}selected{% endif %}>PPF</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Buyer PDP Identifier</label>
+                                <input type="text" name="buyer_pdp_id" class="form-control" value="{{ customer.buyer_pdp_id or '' }}" placeholder="Routing ID (if known)">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Buyer Invoice Email (Optional)</label>
+                                <input type="email" name="buyer_invoice_email" class="form-control" value="{{ customer.buyer_invoice_email or '' }}" placeholder="einvoice@buyer.com">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">PO Required?</label>
+                                <select name="po_required" class="form-select">
+                                    <option value="NO" {% if (customer.po_required or 'NO') == 'NO' %}selected{% endif %}>No</option>
+                                    <option value="YES" {% if customer.po_required == 'YES' %}selected{% endif %}>Yes</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Default Buyer Reference</label>
+                                <input type="text" name="buyer_reference" class="form-control" value="{{ customer.buyer_reference or '' }}" placeholder="Buyer internal reference">
+                            </div>
+
+                            <div class="col-md-5">
+                                <label class="form-label">Default Purchase Order No.</label>
+                                <input type="text" name="default_po_number" class="form-control" value="{{ customer.default_po_number or '' }}" placeholder="PO-...">
+                            </div>
+                            <!-- ========================= -->
+                            <!-- END ADDED FIELDS -->
+                            <!-- ========================= -->
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXISTING ADDRESSES -->
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-map-marker-alt me-2"></i>Manage Addresses</span>
+                        <button type="button" class="btn btn-sm btn-dark" onclick="addAddressRow()">+ Add New Address</button>
+                    </div>
+                    <div class="card-body bg-light" id="addressContainer">
+
+                        {% for addr in customer.addresses %}
+                        <div class="address-card">
+                            <input type="hidden" name="addresses[{{ loop.index0 }}][id]" value="{{ addr.id }}">
+
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label small">Type</label>
+                                    <select name="addresses[{{ loop.index0 }}][type]" class="form-select">
+                                        <option value="BILLING" {% if addr.type == 'BILLING' %}selected{% endif %}>Billing</option>
+                                        <option value="SHIPPING" {% if addr.type == 'SHIPPING' %}selected{% endif %}>Shipping</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Label</label>
+                                    <input type="text" name="addresses[{{ loop.index0 }}][label]" class="form-control" value="{{ addr.label }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Address Line 1</label>
+                                    <input type="text" name="addresses[{{ loop.index0 }}][line1]" class="form-control" value="{{ addr.address_line1 }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Address Line 2</label>
+                                    <input type="text" name="addresses[{{ loop.index0 }}][line2]" class="form-control" value="{{ addr.address_line2 or '' }}">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label small">Zip</label>
+                                    <input type="text" name="addresses[{{ loop.index0 }}][zip]" class="form-control" value="{{ addr.zip_code or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">City</label>
+                                    <input type="text" name="addresses[{{ loop.index0 }}][city]" class="form-control" value="{{ addr.city }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Country</label>
+                                    <select name="addresses[{{ loop.index0 }}][country]" class="form-select">
+                                        <option value="FR" {% if addr.country == 'FR' %}selected{% endif %}>France</option>
+                                        <option value="ES" {% if addr.country == 'ES' %}selected{% endif %}>Spain</option>
+                                        <option value="DE" {% if addr.country == 'DE' %}selected{% endif %}>Germany</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<script>
+    let addrIndex = {{ customer.addresses|length }};
+
+    function addAddressRow() {
+        const container = document.getElementById('addressContainer');
+        const html = `
+            <div class="address-card border-warning">
+                <input type="hidden" name="addresses[${addrIndex}][id]" value="new">
+                <h6 class="text-warning small fw-bold mb-2">New Address</h6>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label small">Type</label>
+                        <select name="addresses[${addrIndex}][type]" class="form-select">
+                            <option value="SHIPPING">Shipping</option>
+                            <option value="BILLING">Billing</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Label</label>
+                        <input type="text" name="addresses[${addrIndex}][label]" class="form-control" placeholder="Label">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Address Line 1</label>
+                        <input type="text" name="addresses[${addrIndex}][line1]" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Address Line 2</label>
+                        <input type="text" name="addresses[${addrIndex}][line2]" class="form-control">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label small">Zip</label>
+                        <input type="text" name="addresses[${addrIndex}][zip]" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">City</label>
+                        <input type="text" name="addresses[${addrIndex}][city]" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Country</label>
+                        <select name="addresses[${addrIndex}][country]" class="form-select">
+                            <option value="FR">France</option>
+                            <option value="ES">Spain</option>
+                            <option value="DE">Germany</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        addrIndex++;
+    }
+</script>
+{% endblock %}

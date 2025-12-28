@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="hero-title">Professional E-Invoicing Made Simple.</h1>
+                <p class="hero-text">
+                    Compliant with French & Spanish regulations.
+                    Create, manage, and send invoices effortlessly.
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary-orange btn-lg">Get Started Free</a>
+                    <a href="{{ url_for('public.contact') }}" class="btn btn-outline-light btn-lg">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Grid -->
+<section class="py-5">
+    <div class="container py-4">
+        <div class="row text-center mb-5">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="fw-bold">Why Choose Invoicr?</h2>
+                <p class="text-muted">Designed for SMEs who need speed and compliance.</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-custom h-100 p-4 text-center">
+                    <div class="mb-3 text-warning display-4"><i class="fa-solid fa-file-invoice"></i></div>
+                    <h4>Factur-X & FacturaE</h4>
+                    <p class="text-muted">Automatic generation of compliant XML formats for France and Spain.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-custom h-100 p-4 text-center">
+                    <div class="mb-3 text-warning display-4"><i class="fa-solid fa-bolt"></i></div>
+                    <h4>Instant Delivery</h4>
+                    <p class="text-muted">Connect directly to government portals via our integration layer.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-custom h-100 p-4 text-center">
+                    <div class="mb-3 text-warning display-4"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h4>Secure Archiving</h4>
+                    <p class="text-muted">Keep your documents safe and accessible for legal durations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

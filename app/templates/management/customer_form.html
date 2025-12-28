@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <form method="POST" id="customerForm">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold text-dark">Create Customer Master</h2>
+                <div>
+                    <a href="{{ url_for('management.customers_list') }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-warning fw-bold px-4"><i class="fas fa-save me-2"></i>Save Customer</button>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active text-dark fw-bold" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">General Info</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-dark fw-bold" id="billing-tab" data-bs-toggle="tab" data-bs-target="#billing" type="button">Primary Billing</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-dark fw-bold" id="shipping-tab" data-bs-toggle="tab" data-bs-target="#shipping" type="button">Shipping Addresses</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="myTabContent">
+
+                <!-- TAB 1: General Information -->
+                <div class="tab-pane fade show active" id="general">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="text-warning mb-3"><i class="fas fa-id-card me-2"></i>Identity & Finance</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Company Legal Name *</label>
+                                <input type="text" name="name" class="form-control" placeholder="e.g. Acme Corp SAS" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">VAT Number *</label>
+                                <input type="text" name="vat_number" class="form-control" placeholder="FR..." required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">SIREN</label>
+                                <input type="text" name="siren" class="form-control" placeholder="9 digits">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">SIRET / Registration ID</label>
+                                <input type="text" name="siret" class="form-control" placeholder="14 digits">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Contact Person</label>
+                                <input type="text" name="contact_name" class="form-control" placeholder="Accounts / Billing Contact">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Contact Phone</label>
+                                <input type="text" name="phone" class="form-control" placeholder="+33 ...">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Currency</label>
+                                <select name="currency" class="form-select">
+                                    <option value="EUR" selected>EUR (€)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Payment Terms</label>
+                                <select name="payment_terms" class="form-select">
+                                    <option value="ON_RECEIPT">Due on Receipt</option>
+                                    <option value="30_DAYS">30 Days Net</option>
+                                    <option value="45_DAYS">45 Days End of Month</option>
+                                    <option value="60_DAYS">60 Days Net</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Contact Email</label>
+                                <input type="email" name="email" class="form-control" placeholder="billing@client.com">
+                            </div>
+                        </div>
+
+                        <!-- Missing Buyer-specific fields (France e-invoicing aligned) -->
+                        <hr class="my-4">
+                        <h6 class="text-dark fw-bold mb-3"><i class="fas fa-building me-2"></i>Buyer (Customer) E-Invoicing Details</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Buyer Type</label>
+                                <select name="buyer_type" class="form-select">
+                                    <option value="B2B" selected>B2B (Domestic)</option>
+                                    <option value="B2C">B2C</option>
+                                    <option value="EXPORT">Export</option>
+                                    <option value="INTRA_EU">Intra-EU</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Invoice Delivery Channel</label>
+                                <select name="delivery_channel" class="form-select">
+                                    <option value="PDP" selected>PDP</option>
+                                    <option value="PPF">PPF</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Buyer PDP Identifier</label>
+                                <input type="text" name="buyer_pdp_id" class="form-control" placeholder="Buyer PDP ID / Routing ID (if known)">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Buyer Invoice Email (Optional)</label>
+                                <input type="email" name="buyer_invoice_email" class="form-control" placeholder="einvoice@buyer.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Buyer Reference / PO Required?</label>
+                                <select name="po_required" class="form-select">
+                                    <option value="NO" selected>No</option>
+                                    <option value="YES">Yes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Default Buyer Reference (Optional)</label>
+                                <input type="text" name="buyer_reference" class="form-control" placeholder="Buyer internal code / reference">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Default Purchase Order Number (Optional)</label>
+                                <input type="text" name="default_po_number" class="form-control" placeholder="PO-....">
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TAB 2: Primary Billing Address -->
+                <div class="tab-pane fade" id="billing">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="text-warning mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Legal Billing Address</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Address Line 1 *</label>
+                            <input type="text" name="billing_address1" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address Line 2</label>
+                            <input type="text" name="billing_address2" class="form-control">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <label class="form-label">City *</label>
+                                <input type="text" name="billing_city" class="form-control" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zip Code *</label>
+                                <input type="text" name="billing_zip" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Country</label>
+                                <select name="billing_country" class="form-select">
+                                    <option value="FR" selected>France</option>
+                                    <option value="ES">Spain</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="IT">Italy</option>
+                                    <option value="BE">Belgium</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Shipping Addresses -->
+                <div class="tab-pane fade" id="shipping">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="text-warning mb-3"><i class="fas fa-truck me-2"></i>Additional Shipping Address (Optional)</h5>
+                        <p class="text-muted small">You can add more addresses later. Add one initial shipping location here.</p>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="sameAsBilling" onchange="toggleShipping()">
+                            <label class="form-check-label" for="sameAsBilling">
+                                Same as Billing Address
+                            </label>
+                        </div>
+
+                        <div id="shippingFields">
+                            <div class="mb-3">
+                                <label class="form-label">Location Label (e.g. Warehouse)</label>
+                                <input type="text" name="shipping_label" class="form-control" placeholder="Main Warehouse">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" name="shipping_address1" class="form-control">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <label class="form-label">City</label>
+                                    <input type="text" name="shipping_city" class="form-control">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Zip Code</label>
+                                    <input type="text" name="shipping_zip" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Country</label>
+                                    <select name="shipping_country" class="form-select">
+                                        <option value="FR">France</option>
+                                        <option value="ES">Spain</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleShipping() {
+        const checkbox = document.getElementById('sameAsBilling');
+        const fields = document.getElementById('shippingFields');
+        if (checkbox.checked) {
+            fields.style.display = 'none';
+        } else {
+            fields.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

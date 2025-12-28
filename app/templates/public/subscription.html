@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="mb-5">Our Pricing Plans</h1>
+    <div class="row justify-content-center">
+        <!-- Basic Plan -->
+        <div class="col-md-4">
+            <div class="card card-custom mb-4">
+                <div class="card-header bg-white pt-4">
+                    <h3>Starter</h3>
+                </div>
+                <div class="card-body">
+                    <h1 class="card-title pricing-card-title">€0<small class="text-muted fw-light">/mo</small></h1>
+                    <ul class="list-unstyled mt-3 mb-4">
+                        <li>10 Invoices / mo</li>
+                        <li>Email Support</li>
+                        <li>Basic PDF Export</li>
+                    </ul>
+                    <button type="button" class="w-100 btn btn-lg btn-outline-dark">Sign up for free</button>
+                </div>
+            </div>
+        </div>
+        <!-- Pro Plan -->
+        <div class="col-md-4">
+            <div class="card card-custom border-warning mb-4">
+                <div class="card-header bg-warning text-white pt-4">
+                    <h3>Pro</h3>
+                </div>
+                <div class="card-body">
+                    <h1 class="card-title pricing-card-title">€29<small class="text-muted fw-light">/mo</small></h1>
+                    <ul class="list-unstyled mt-3 mb-4">
+                        <li>Unlimited Invoices</li>
+                        <li>Factur-X / FacturaE XML</li>
+                        <li>Priority Support</li>
+                    </ul>
+                    <button type="button" class="w-100 btn btn-lg btn-primary-orange">Get started</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

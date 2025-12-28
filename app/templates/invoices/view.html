@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZh3fWj7h6vC1Zl4Wq7ZqQhZp5G6k5QnJ4GqG6tKux0r3vjZc+GqGkqV5c5x5Qeg=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/invoice.css') }}">
+
+<style>
+  .invoice-split-wrap .left-list { max-height: 70vh; overflow-y: auto; }
+  .invoice-split-wrap .inv-row { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+  .invoice-split-wrap .inv-left { min-width: 0; }
+
+  /* Left list spacing + fonts */
+  .invoice-split-wrap .inv-left .inv-no { font-weight: 800; line-height: 1.15; margin-bottom: 6px; }
+  .invoice-split-wrap .inv-left .inv-cust { font-size: 1.02rem; font-weight: 800; line-height: 1.15; margin-bottom: 4px; }
+  .invoice-split-wrap .inv-left .inv-date { font-size: .95rem; font-weight: 600; opacity: .95; }
+
+  .invoice-split-wrap .inv-amt { white-space:nowrap; font-size: 1.05rem; font-weight: 800; padding: 8px 10px; }
+  .pdp-table td, .pdp-table th { font-size: 0.92rem; }
+
+  /* Company header row (logo + name inline) */
+  .company-inline-head {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 14px 22px 0 22px;
+  }
+  .company-inline-head img { height: 28px; width:auto; object-fit:contain; }
+  .company-inline-head .company-name { font-weight: 900; font-size: 1.15rem; line-height: 1; }
+
+  /* ✅ Reduce vertical gaps inside printable invoice (so Terms/Bank start right after lines end) */
+  .printable-wrap * { box-sizing: border-box; }
+  .printable-wrap hr { margin: 10px 0 !important; }
+  .printable-wrap .mt-5 { margin-top: 1rem !important; }
+  .printable-wrap .mb-5 { margin-bottom: 1rem !important; }
+  .printable-wrap .py-5 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .printable-wrap .pt-5 { padding-top: 1rem !important; }
+  .printable-wrap .pb-5 { padding-bottom: 1rem !important; }
+  .printable-wrap .my-5 { margin-top: 1rem !important; margin-bottom: 1rem !important; }
+  .printable-wrap .spacer,
+  .printable-wrap .invoice-spacer,
+  .printable-wrap .page-spacer { display:none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
+
+  /* Common “terms/bank” blocks: tighten spacing + keep one below another */
+  .printable-wrap .terms,
+  .printable-wrap .terms-block,
+  .printable-wrap .invoice-terms,
+  .printable-wrap .bank-details,
+  .printable-wrap .bank-block,
+  .printable-wrap .invoice-bank {
+    margin-top: 10px !important;
+    margin-bottom: 8px !important;
+    padding-top: 0 !important;
+  }
+  .printable-wrap .terms h6,
+  .printable-wrap .terms-block h6,
+  .printable-wrap .invoice-terms h6,
+  .printable-wrap .bank-details h6,
+  .printable-wrap .bank-block h6,
+  .printable-wrap .invoice-bank h6 {
+    margin-bottom: 6px !important;
+  }
+  .printable-wrap .terms p,
+  .printable-wrap .terms-block p,
+  .printable-wrap .invoice-terms p,
+  .printable-wrap .bank-details p,
+  .printable-wrap .bank-block p,
+  .printable-wrap .invoice-bank p,
+  .printable-wrap .terms div,
+  .printable-wrap .bank-details div {
+    margin: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Amount in words + signature (keep close to totals) */
+  .amount-words-wrap {
+    padding: 6px 22px 0 22px;
+    margin-top: 6px;
+    font-size: 0.95rem;
+  }
+  .amount-words-wrap .label { font-weight: 800; }
+  .signature-wrap { display:flex; justify-content:flex-end; padding: 10px 22px 14px; margin-top: 6px; }
+  .signature-box { width: 280px; text-align: center; }
+  .signature-for { font-weight: 800; }
+  .signature-space { height: 52px; }
+  .signature-label { font-weight: 700; border-top: 1px solid #bbb; padding-top: 6px; }
+
+  @media print {
+    .signature-wrap { page-break-inside: avoid; }
+  }
+</style>
+
+<div class="container-fluid py-3 invoice-split-wrap">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-bold m-0">View Invoices</h3>
+
+    <!-- ✅ Toolbar: Keep Create e-Invoice, move others under Actions dropdown -->
+    <div class="d-flex gap-2 align-items-center">
+      <a class="btn btn-success" href="#"><i class="fas fa-file-export me-1"></i> Create e-Invoice</a>
+
+      <div class="dropdown">
+        <button class="btn btn-dark dropdown-toggle" type="button" id="actionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-ellipsis-v me-1"></i> Actions
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionsDropdown">
+          <li>
+            <a class="dropdown-item" href="{{ url_for('invoices.edit', id=invoice.id) }}">
+              <i class="fas fa-pen-to-square me-2"></i> Edit
+            </a>
+          </li>
+
+          <li>
+            <button class="dropdown-item" type="button" onclick="window.print()">
+              <i class="fas fa-print me-2"></i> Print
+            </button>
+          </li>
+
+          <li>
+            <a class="dropdown-item" href="{{ url_for('invoices.pdf', id=invoice.id) }}">
+              <i class="fas fa-file-pdf me-2"></i> Download PDF
+            </a>
+          </li>
+
+          <li><hr class="dropdown-divider"></li>
+
+          <li>
+            <a class="dropdown-item" href="{{ url_for('invoices.index') }}">
+              <i class="fas fa-arrow-left me-2"></i> Back
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Left panel: List -->
+    <div class="col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold d-flex justify-content-between">
+          <span>Invoices</span>
+          <span>Total Invoice Amount</span>
+        </div>
+
+        <div class="list-group list-group-flush left-list">
+          {% for inv in invoices %}
+          <a class="list-group-item list-group-item-action {% if inv.id == invoice.id %}active{% endif %}"
+             href="{{ url_for('invoices.view', id=inv.id) }}">
+            <div class="inv-row">
+              <div class="inv-left">
+                <div class="inv-no">{{ inv.invoice_number }}</div>
+
+                {% set inv_cust_name = (inv.customer_name or (inv.customer.name if inv.customer is defined and inv.customer else None) or '--') %}
+                <div class="inv-cust">{{ inv_cust_name }}</div>
+                <div class="inv-date">
+                  {{ inv.invoice_date.strftime('%Y-%m-%d') if inv.invoice_date else '' }}
+                </div>
+              </div>
+
+              <div class="inv-amt badge bg-light text-dark border">
+                €{{ "%.2f"|format(inv.total_gross or 0) }}
+              </div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="col-md-9">
+      <!-- Block 1 -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+          Invoice (Printable)
+        </div>
+        <div class="card-body p-0 printable-wrap">
+
+          <!-- Logo + Company name inline -->
+          <div class="company-inline-head">
+            <img src="{{ url_for('static', filename='images/acer_logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+            <div class="company-name">{{ company.legal_name or company.name }}</div>
+          </div>
+
+          {% include 'invoices/partials/invoice_render.html' %}
+
+          <!-- ✅ Amount in words (below totals area; kept close) -->
+          <div class="amount-words-wrap">
+            <span class="label">Total (in words):</span>
+            <span id="amountInWords">—</span>
+          </div>
+
+          <!-- ✅ Signature (kept close to totals end) -->
+          <div class="signature-wrap">
+            <div class="signature-box">
+              <div class="signature-for">
+                For {{ company.legal_name or company.name }}
+              </div>
+              <div class="signature-space"></div>
+              <div class="signature-label">Authorized Signatory</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Block 2 -->
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+          <span>PDP Payload Fields (France e-Invoicing)</span>
+          <span class="badge bg-warning text-dark">Auto-captured from Org + Customer + Invoice</span>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered pdp-table mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 28%;">Field</th>
+                  <th>Value</th>
+                  <th style="width: 20%;">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Supplier -->
+                <tr><td>Supplier Legal Name</td><td>{{ company.legal_name or company.name }}</td><td>Organization</td></tr>
+                <tr><td>Supplier Name</td><td>{{ company.name }}</td><td>Organization</td></tr>
+                <tr><td>Supplier VAT</td><td>{{ company.vat_number or '--' }}</td><td>Organization</td></tr>
+                <tr><td>Supplier SIREN</td><td>{{ company.siren or '--' }}</td><td>Organization</td></tr>
+                <tr><td>Supplier SIRET</td><td>{{ company.siret or '--' }}</td><td>Organization</td></tr>
+                <tr><td>Supplier Invoice Email</td><td>{{ company.invoice_email or '--' }}</td><td>Organization</td></tr>
+                <tr><td>Supplier Invoice Phone</td><td>{{ company.invoice_phone or '--' }}</td><td>Organization</td></tr>
+
+                <!-- Buyer -->
+                <tr><td>Buyer Name</td><td>{{ customer.name if customer else (invoice.customer_name or '--') }}</td><td>Customer</td></tr>
+                <tr><td>Buyer VAT</td><td>{{ customer.vat_number if customer else (invoice.customer_vat or '--') }}</td><td>Customer/Invoice</td></tr>
+                <tr><td>Buyer SIREN</td><td>{{ customer.siren if customer else '--' }}</td><td>Customer</td></tr>
+                <tr><td>Buyer SIRET</td><td>{{ customer.siret if customer else '--' }}</td><td>Customer</td></tr>
+                <tr><td>Buyer Email</td><td>{{ customer.email if customer else '--' }}</td><td>Customer</td></tr>
+                <tr><td>Buyer Phone</td><td>{{ customer.phone if customer else '--' }}</td><td>Customer</td></tr>
+
+                <!-- Invoice FR metadata -->
+                <tr><td>FR Document Type</td><td>{{ invoice.fr_document_type or '--' }}</td><td>Invoice</td></tr>
+                <tr><td>FR Transaction Category</td><td>{{ invoice.fr_transaction_category or '--' }}</td><td>Invoice</td></tr>
+                <tr><td>FR Payment Means</td><td>{{ invoice.fr_payment_means or '--' }}</td><td>Invoice</td></tr>
+                <tr><td>FR Payment Terms Text</td><td>{{ invoice.fr_payment_terms_text or '--' }}</td><td>Invoice</td></tr>
+
+                <!-- Invoice core -->
+                <tr><td>Invoice Number</td><td>{{ invoice.invoice_number }}</td><td>Invoice</td></tr>
+                <tr><td>Invoice Date</td><td>{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice.invoice_date else '--' }}</td><td>Invoice</td></tr>
+                <tr><td>Due Date</td><td>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '--' }}</td><td>Invoice</td></tr>
+                <tr><td>Total Net</td><td>€{{ "%.2f"|format(invoice.total_net or 0) }}</td><td>Invoice</td></tr>
+                <tr><td>Total VAT</td><td>€{{ "%.2f"|format(invoice.total_tax or 0) }}</td><td>Invoice</td></tr>
+                <tr><td>Total Gross</td><td>€{{ "%.2f"|format(invoice.total_gross or 0) }}</td><td>Invoice</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-muted small mt-2">
+            Note: Address fields (Bill-to/Ship-to) are already included in the printable invoice block above.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Convert number to words (English) for EUR amount
+  function numberToWords(n) {
+    n = Math.floor(n);
+    const a = ["","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+    const b = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+    const g = ["","thousand","million","billion"];
+
+    function chunkToWords(num) {
+      let str = "";
+      const hundred = Math.floor(num / 100);
+      const rest = num % 100;
+      if (hundred) str += a[hundred] + " hundred";
+      if (rest) {
+        if (str) str += " ";
+        if (rest < 20) str += a[rest];
+        else str += b[Math.floor(rest/10)] + (rest%10 ? "-" + a[rest%10] : "");
+      }
+      return str;
+    }
+
+    if (n === 0) return "zero";
+    let out = [];
+    let i = 0;
+    while (n > 0) {
+      const chunk = n % 1000;
+      if (chunk) {
+        let w = chunkToWords(chunk);
+        if (g[i]) w += " " + g[i];
+        out.unshift(w);
+      }
+      n = Math.floor(n / 1000);
+      i++;
+    }
+    return out.join(" ");
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const gross = parseFloat("{{ (invoice.total_gross or 0) | round(2) }}") || 0;
+    const euros = Math.floor(gross);
+    const cents = Math.round((gross - euros) * 100);
+
+    const words = numberToWords(euros);
+    const centWords = cents ? numberToWords(cents) : "";
+
+    let finalText = words.charAt(0).toUpperCase() + words.slice(1) + " euro";
+    if (euros !== 1) finalText += "s";
+    if (cents) {
+      finalText += " and " + centWords + " cent";
+      if (cents !== 1) finalText += "s";
+    }
+    finalText += " only";
+
+    const el = document.getElementById('amountInWords');
+    if (el) el.textContent = finalText;
+  });
+</script>
+
+{% if auto_print %}
+<script>
+  window.addEventListener('load', function(){ window.print(); });
+</script>
+{% endif %}
+{% endblock %}

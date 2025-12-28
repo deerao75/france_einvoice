@@ -1,0 +1,1011 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Font Awesome (fix icons not loading by using official CDN with integrity) -->
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZh3fWj7h6vC1Zl4Wq7ZqQhZp5G6k5QnJ4GqG6tKux0r3vjZc+GqGkqV5c5x5Qeg=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+    /* FULL SCREEN: remove gaps at the bottom and make the page fill viewport */
+    .invoice-container {
+        max-width: 100%;
+        margin: 0;
+        padding: 0 15px 15px 15px;
+        height: calc(100vh - 80px); /* account for header/nav */
+        overflow: hidden; /* no outer scroll, inner columns will scroll */
+        display: flex;
+        flex-direction: column;
+    }
+    .invoice-container form {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    .invoice-container form > .row {
+        flex: 1;
+        overflow: hidden; /* let columns handle vertical scroll */
+    }
+    .invoice-container .col-xl-9,
+    .invoice-container .col-lg-8 {
+        height: 100%;
+        overflow-y: auto;
+        padding-bottom: 8px; /* small breathing space */
+    }
+    .invoice-container .col-xl-3,
+    .invoice-container .col-lg-4 {
+        height: 100%;
+        overflow-y: auto;
+        padding-bottom: 8px;
+    }
+
+    /* Fonts */
+    .invoice-container * {
+        font-family: 'Aptos', 'Segoe UI', -apple-system, sans-serif;
+    }
+
+    /* Address textareas: keep taller fixed height */
+    #billFromText, #shipFromText, #billToText, #shipToText {
+        min-height: 130px !important;
+        height: 130px !important;
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+        resize: none;
+    }
+
+    /* Cards */
+    .invoice-container .card {
+        margin-bottom: 15px !important;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .invoice-container .card-header {
+        padding: 10px 16px !important;
+    }
+    .invoice-container .card-body {
+        padding: 15px !important;
+    }
+
+    /* Labels and inputs */
+    .invoice-container .form-label,
+    .invoice-container label {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin-bottom: 5px !important;
+    }
+    .invoice-container .form-control,
+    .invoice-container .form-select {
+        font-size: 15px !important;
+        padding: 8px 12px !important;
+    }
+
+    .invoice-container .table thead th {
+        font-size: 14px !important;
+        padding: 10px 8px !important;
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
+    }
+    .invoice-container .table tbody td {
+        padding: 0 !important;
+        vertical-align: middle !important;
+    }
+    .invoice-container .table tbody input,
+    .invoice-container .table tbody select {
+        font-size: 14px !important;
+        padding: 10px 8px !important;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        width: 100%;
+    }
+    .invoice-container .table tbody input:focus,
+    .invoice-container .table tbody select:focus {
+        box-shadow: inset 0 0 0 2px #ff6b35;
+        background: #fff;
+        outline: none;
+    }
+    .invoice-container .total-display {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        padding: 10px 8px !important;
+    }
+
+    /* Summary box */
+    .invoice-container .grand-total-box {
+        background-color: #fff9f0;
+        border: 2px solid #ffe0b2;
+    }
+    .invoice-container .grand-total-box .card-body {
+        padding: 15px !important;
+    }
+    .invoice-container .grand-total-box .card-title {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 8px !important;
+    }
+    .invoice-container .grand-total-box .summary-label {
+        font-size: 14px !important;
+        color: #555;
+    }
+    .invoice-container .grand-total-box .summary-value {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+    }
+    .invoice-container .grand-total-box .grand-total-label {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+    }
+    .invoice-container .grand-total-box .grand-total-value {
+        font-size: 20px !important;
+        font-weight: 700 !important;
+        color: #1976d2;
+    }
+
+    /* Sidebar cards compact */
+    .invoice-container .col-xl-3 .card textarea {
+        font-size: 14px !important;
+        padding: 10px !important;
+        line-height: 1.4 !important;
+        border: none;
+    }
+    .invoice-container .col-xl-3 .card-header {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        padding: 10px 14px !important;
+    }
+
+    .invoice-container .card-footer {
+        padding: 10px 15px !important;
+        background-color: #fff;
+    }
+    .invoice-container #lineItemsTable { margin-bottom: 0; }
+
+    .invoice-container h2 {
+        font-size: 26px !important;
+        font-weight: 700 !important;
+    }
+    .invoice-container .status-indicator {
+        font-size: 13px !important;
+        padding: 6px 14px !important;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .invoice-container .status-draft { background-color: #fff3cd; color: #856404; }
+    .invoice-container .status-final { background-color: #d4edda; color: #155724; }
+    .invoice-container .btn-lg {
+        font-size: 15px !important;
+        padding: 10px 18px !important;
+    }
+
+    .btn-draft {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #212529 !important;
+        font-weight: 600 !important;
+    }
+    .btn-draft:hover { background-color: #e0a800 !important; border-color: #d39e00 !important; }
+    .btn-finalize {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+    .btn-finalize:hover { background-color: #218838 !important; border-color: #1e7e34 !important; }
+
+    .invoice-container .fw-bold.text-secondary {
+        font-size: 13px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .invoice-container .form-select-sm {
+        font-size: 14px !important;
+        padding: 6px 10px !important;
+    }
+
+    .invoice-container .badge {
+        font-size: 13px !important;
+        padding: 6px 12px !important;
+    }
+
+    .invoice-container .row.g-4 { --bs-gutter-y: 15px; --bs-gutter-x: 20px; }
+    .invoice-container .row.g-3 { --bs-gutter-y: 10px; --bs-gutter-x: 15px; }
+
+    .invoice-container .input-group-text {
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+    }
+
+    .invoice-container .table .btn-sm {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+    }
+
+    /* ✅ ALIGNMENT FIX: Make right sidebar stretch so Bank Details bottom aligns with Items/Services bottom */
+    .invoice-sidebar { display:flex; flex-direction:column; height:100%; }
+    .invoice-sidebar .sidebar-stack { display:flex; flex-direction:column; flex:1; min-height:0; }
+    .invoice-sidebar .sidebar-stack .card { flex:1; display:flex; flex-direction:column; min-height:0; }
+    .invoice-sidebar .sidebar-stack .card textarea { flex:1; min-height:0 !important; }
+</style>
+
+<div class="invoice-container">
+    <form method="POST" id="invoiceForm" action="">
+        <!-- Hidden fields -->
+        <input type="hidden" name="computed_subtotal" id="computedSubtotal" value="0">
+        <input type="hidden" name="computed_tax" id="computedTax" value="0">
+        <input type="hidden" name="computed_total" id="computedTotal" value="0">
+        <input type="hidden" name="save_type" id="saveType" value="draft">
+        <input type="hidden" name="customer_name_hidden" id="customerNameHidden" value="{{ invoice.customer_name if invoice else '' }}">
+        <input type="hidden" name="customer_vat" id="customerVatHidden" value="{{ invoice.customer_vat if invoice else '' }}">
+
+        <!-- ========================= -->
+        <!-- France e-Invoicing (AUTO) -->
+        <!-- ========================= -->
+        <!-- Supplier (from Organization Profile) -->
+        <input type="hidden" name="supplier_legal_name" id="supplierLegalNameHidden" value="{{ company.legal_name or company.name }}">
+        <input type="hidden" name="supplier_name" id="supplierNameHidden" value="{{ company.name }}">
+        <input type="hidden" name="supplier_vat" id="supplierVatHidden" value="{{ company.vat_number or '' }}">
+        <input type="hidden" name="supplier_siren" id="supplierSirenHidden" value="{{ company.siren or '' }}">
+        <input type="hidden" name="supplier_siret" id="supplierSiretHidden" value="{{ company.siret or '' }}">
+        <input type="hidden" name="supplier_invoice_email" id="supplierInvoiceEmailHidden" value="{{ company.invoice_email or '' }}">
+        <input type="hidden" name="supplier_invoice_phone" id="supplierInvoicePhoneHidden" value="{{ company.invoice_phone or '' }}">
+
+        <input type="hidden" name="einvoice_channel" id="einvoiceChannelHidden" value="{{ company.einvoice_channel or 'PDP' }}">
+        <input type="hidden" name="einvoice_format" id="einvoiceFormatHidden" value="{{ company.einvoice_format or 'FACTURX' }}">
+        <input type="hidden" name="supplier_pdp_name" id="supplierPdpNameHidden" value="{{ company.supplier_pdp_name or '' }}">
+        <input type="hidden" name="supplier_pdp_id" id="supplierPdpIdHidden" value="{{ company.supplier_pdp_id or '' }}">
+
+        <!-- Buyer (auto from Customer Profile via select + fetch) -->
+        <input type="hidden" name="buyer_vat" id="buyerVatHidden" value="{{ invoice.customer_vat if invoice else '' }}">
+        <input type="hidden" name="buyer_siren" id="buyerSirenHidden" value="">
+        <input type="hidden" name="buyer_siret" id="buyerSiretHidden" value="">
+        <input type="hidden" name="buyer_email" id="buyerEmailHidden" value="">
+        <input type="hidden" name="buyer_country" id="buyerCountryHidden" value="">
+
+        <!-- Core France e-invoice metadata (client-side helpers only; do NOT submit duplicates) -->
+        <input type="hidden" id="frDocumentTypeHidden" value="{{ invoice.fr_document_type if invoice else 'INVOICE' }}">
+        <input type="hidden" id="frTransactionCategoryHidden" value="{{ invoice.fr_transaction_category if invoice else 'DOMESTIC' }}">
+        <input type="hidden" id="frPaymentMeansHidden" value="{{ invoice.fr_payment_means if invoice else '' }}">
+        <input type="hidden" id="frPaymentTermsTextHidden" value="{{ invoice.fr_payment_terms_text if invoice else '' }}">
+
+
+        <!-- TOP TOOLBAR -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pt-2">
+            <div class="d-flex align-items-center gap-3">
+                <h2 class="fw-bold text-dark m-0">
+                    {% if is_edit %}Edit Invoice{% else %}New Invoice{% endif %}
+                </h2>
+                {% if invoice %}
+                <span class="status-indicator {{ 'status-draft' if invoice.status.value == 'DRAFT' else 'status-final' }}">
+                    <i class="fas {{ 'fa-pencil-alt' if invoice.status.value == 'DRAFT' else 'fa-check' }} me-1"></i>
+                    {{ invoice.status.value }}
+                </span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('invoices.index') }}" class="btn btn-lg btn-outline-secondary px-3">Cancel</a>
+                <button type="submit" name="save_type" value="draft" class="btn btn-lg btn-draft px-3 fw-bold shadow-sm">
+                    <i class="fas fa-save me-1"></i> Save Draft
+                </button>
+                <button type="button" class="btn btn-lg btn-finalize px-3 fw-bold shadow-sm" onclick="finalizeInvoice()">
+                    <i class="fas fa-check-circle me-1"></i> Finalize Invoice
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- LEFT COLUMN -->
+            <div class="col-xl-9 col-lg-8">
+
+                <!-- Invoice Details -->
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white py-2">
+                        <i class="fas fa-info-circle me-2"></i>Invoice Details
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Invoice No.</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">#</span>
+                                    <input type="text" name="invoice_number" class="form-control fw-bold"
+                                           value="{{ invoice.invoice_number if invoice else next_inv_number }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Invoice Date</label>
+                                <input type="date" name="invoice_date" class="form-control" required
+                                       value="{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice and invoice.invoice_date else today }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" name="due_date" class="form-control"
+                                       value="{{ invoice.due_date.strftime('%Y-%m-%d') if invoice and invoice.due_date else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Branch / Division</label>
+                                <input type="text" name="branch_name" class="form-control" value="{{ invoice.branch_name if invoice else 'Head Office' }}">
+                            </div>
+                        </div>
+
+                        <!-- France e-invoice required metadata -->
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-3">
+                                <label class="form-label">Document Type (FR)</label>
+                                <select name="fr_document_type" id="frDocumentType" class="form-select">
+                                    <option value="INVOICE" {% if dt =='INVOICE' %}selected{% endif %}>Invoice</option>
+                                    <option value="CREDIT_NOTE" {% if dt =='CREDIT_NOTE' %}selected{% endif %}>Credit Note (Avoir)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Transaction (FR)</label>
+                                <select name="fr_transaction_category" id="frTransactionCategory" class="form-select">
+                                    <option value="DOMESTIC" {% if tc =='DOMESTIC' %}selected{% endif %}>Domestic (FR)</option>
+                                    <option value="INTRA_EU" {% if tc =='INTRA_EU' %}selected{% endif %}>Intra-EU</option>
+                                    <option value="EXPORT" {% if tc =='EXPORT' %}selected{% endif %}>Export</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Means</label>
+                                <select name="fr_payment_means" id="frPaymentMeans" class="form-select">
+                                  <option value="" {% if (pm or'') == '' %}selected{% endif %}>-- Select --</option>
+                                  <option value="TRANSFER" {% if pm =='TRANSFER' %}selected{% endif %}>Bank Transfer</option>
+                                  <option value="CARD" {% if pm =='CARD' %}selected{% endif %}>Card</option>
+                                  <option value="DIRECT_DEBIT" {% if pm =='DIRECT_DEBIT' %}selected{% endif %}>Direct Debit</option>
+                                  <option value="CASH" {% if pm =='CASH' %}selected{% endif %}>Cash</option>
+                                  <option value="CHEQUE" {% if pm =='CHEQUE' %}selected{% endif %}>Cheque</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Terms (text)</label>
+                                <input type="text" name="fr_payment_terms_text" id="frPaymentTermsText" class="form-control"
+                                       placeholder="e.g. 30 days end of month"
+                                       value="{{ invoice.fr_payment_terms_text if invoice else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer & Addresses -->
+                <div class="card mb-3">
+                    <div class="card-header bg-white py-2 border-bottom">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <label class="fw-bold me-2">Customer:</label>
+                                <select name="customer_id" id="customerSelect" class="form-select d-inline-block w-75 bg-light fw-bold" onchange="loadCustomerData(this.value)">
+                                    <option value="">-- Choose Customer --</option>
+                                    {% for c in customers %}
+                                    <option value="{{ c.id }}"
+                                            data-name="{{ c.name }}"
+                                            data-vat="{{ c.vat_number }}"
+                                            data-siret="{{ c.siret or '' }}"
+                                            data-siren="{{ c.siren or '' }}"
+                                            data-email="{{ c.email or '' }}"
+                                            data-country="{% set a = c.addresses[0] if c.addresses else None %}{{ a.country if a else '' }}"
+                                            {% if invoice and invoice.customer_id == c.id %}selected{% endif %}>
+                                        {{ c.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="badge bg-light text-dark border">Supplier VAT: <span id="supplierVat" class="fw-bold">{{ company.vat_number }}</span></span>
+                                <span class="badge bg-warning text-dark ms-2">Customer VAT: <span id="customerVat" class="fw-bold">{{ invoice.customer_vat if invoice else '--' }}</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body bg-light p-3">
+                        <div class="row g-3">
+                            <!-- Bill From -->
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Bill From (Supplier)</label>
+                                <select name="bill_from_select" id="billFromSelect" class="form-select form-select-sm mb-2" onchange="updateSupplierAddress('bill')">
+                                    {% for addr in company.addresses if addr.type == 'BILLING' %}
+                                    <option value="{{ addr.id }}"
+                                            data-line1="{{ addr.address_line1 }}"
+                                            data-line2="{{ addr.address_line2 or '' }}"
+                                            data-city="{{ addr.city }}"
+                                            data-zip="{{ addr.zip_code }}"
+                                            data-country="{{ addr.country }}"
+                                            {% if loop.first %}selected{% endif %}>
+                                        {{ addr.label or 'Billing' }} ({{ addr.city }})
+                                    </option>
+                                    {% endfor %}
+                                    {% if not company.addresses|selectattr('type', 'equalto', 'BILLING')|list %}
+                                    <option value="default">Default Address</option>
+                                    {% endif %}
+                                </select>
+                                <textarea name="bill_from" id="billFromText" class="form-control" rows="6" readonly style="background-color: #e9ecef;">{{ supplier_bill_default }}</textarea>
+                            </div>
+
+                            <!-- Ship From -->
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Ship From (Dispatch)</label>
+                                <select name="ship_from_select" id="shipFromSelect" class="form-select form-select-sm mb-2" onchange="updateSupplierAddress('ship')">
+                                    <option value="same">Same as Bill From</option>
+                                    {% for addr in company.addresses if addr.type == 'SHIPPING' %}
+                                    <option value="{{ addr.id }}"
+                                            data-line1="{{ addr.address_line1 }}"
+                                            data-line2="{{ addr.address_line2 or '' }}"
+                                            data-city="{{ addr.city }}"
+                                            data-zip="{{ addr.zip_code }}"
+                                            data-country="{{ addr.country }}">
+                                        {{ addr.label or 'Shipping' }} ({{ addr.city }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <textarea name="ship_from" id="shipFromText" class="form-control" rows="6" readonly style="background-color: #e9ecef;">{{ supplier_ship_default }}</textarea>
+                            </div>
+
+                            <!-- Bill To -->
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Bill To (Customer)</label>
+                                <select name="bill_to_select" id="billToSelect" class="form-select form-select-sm mb-2" onchange="updateCustomerAddress('bill')">
+                                    <option value="">-- Select Customer First --</option>
+                                </select>
+                                <textarea name="bill_to" id="billToText" class="form-control" rows="6" placeholder="Select customer to load address">{{ invoice.bill_to_address if invoice else '' }}</textarea>
+                            </div>
+
+                            <!-- Ship To -->
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Ship To (Delivery)</label>
+                                <select name="ship_to_select" id="shipToSelect" class="form-select form-select-sm mb-2" onchange="updateCustomerAddress('ship')">
+                                    <option value="">-- Select Customer First --</option>
+                                </select>
+                                <textarea name="ship_to" id="shipToText" class="form-control" rows="6" placeholder="Delivery address...">{{ invoice.ship_to_address if invoice else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3 g-3">
+                            <div class="col-md-6">
+                                <label class="fw-bold text-secondary">Kind Attention</label>
+                                <input type="text" name="kind_attention" class="form-control"
+                                       placeholder="e.g. Mr. John Doe (Procurement)"
+                                       value="{{ invoice.kind_attention if invoice else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-bold text-secondary">Place of Supply</label>
+                                <select name="place_of_supply" class="form-select">
+                                    <option value="FR" {% if invoice and invoice.place_of_supply == 'FR' %}selected{% endif %}>France (FR)</option>
+                                    <option value="ES" {% if invoice and invoice.place_of_supply == 'ES' %}selected{% endif %}>Spain (ES)</option>
+                                    <option value="DE" {% if invoice and invoice.place_of_supply == 'DE' %}selected{% endif %}>Germany (DE)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white py-2">
+                        <i class="fas fa-list me-2"></i>Items / Services
+                    </div>
+                    <div class="p-0 table-responsive">
+                        <table class="table table-bordered mb-0" id="lineItemsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18%;">Product/Service</th>
+                                    <th style="width: 22%;">Description</th>
+                                    <th style="width: 10%;">HSN/SAC</th>
+                                    <th style="width: 8%;">Qty</th>
+                                    <th style="width: 12%;">Rate (€)</th>
+                                    <th style="width: 10%;">Tax %</th>
+                                    <th style="width: 14%;" class="text-end">Total (€)</th>
+                                    <th style="width: 6%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="linesContainer">
+                                {% if invoice and invoice.lines %}
+                                    {% for line in invoice.lines %}
+                                    <tr class="line-item">
+                                        <td>
+                                            <select name="lines[{{ loop.index0 }}][product_id]" class="form-select product-select" onchange="loadProductData(this)">
+                                                <option value="">-- Select --</option>
+                                                {% for p in products %}
+                                                <option value="{{ p.id }}"
+                                                        data-code="{{ p.code or '' }}"
+                                                        data-description="{{ p.description or p.name }}"
+                                                        data-price="{{ p.unit_price or 0 }}"
+                                                        data-vat="{{ p.vat_rate or 0 }}"
+                                                        {% if line.product_id == p.id %}selected{% endif %}>
+                                                    {{ p.name }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="lines[{{ loop.index0 }}][desc]" class="form-control desc-input" value="{{ line.description }}"></td>
+                                        <td><input type="text" name="lines[{{ loop.index0 }}][hsn]" class="form-control hsn-input" value="{{ line.hsn_sac_code or '' }}"></td>
+                                        <td><input type="number" name="lines[{{ loop.index0 }}][qty]" class="form-control qty-input" value="{{ line.quantity }}" min="1" oninput="calculateRow(this)"></td>
+                                        <td><input type="number" step="0.01" name="lines[{{ loop.index0 }}][rate]" class="form-control rate-input" value="{{ line.unit_price }}" oninput="calculateRow(this)"></td>
+                                        <td>
+                                            <select name="lines[{{ loop.index0 }}][tax]" class="form-select tax-input" onchange="calculateRow(this)">
+                                                <option value="20" {% if line.vat_rate == 20 %}selected{% endif %}>20%</option>
+                                                <option value="10" {% if line.vat_rate == 10 %}selected{% endif %}>10%</option>
+                                                <option value="5.5" {% if line.vat_rate == 5.5 %}selected{% endif %}>5.5%</option>
+                                                <option value="0" {% if line.vat_rate == 0 %}selected{% endif %}>0%</option>
+                                            </select>
+                                        </td>
+                                        <td class="text-end total-display">{{ "%.2f"|format(line.line_total or 0) }}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr class="line-item">
+                                    <td>
+                                        <select name="lines[0][product_id]" class="form-select product-select" onchange="loadProductData(this)">
+                                            <option value="">-- Select --</option>
+                                            {% for p in products %}
+                                            <option value="{{ p.id }}"
+                                                    data-code="{{ p.code or '' }}"
+                                                    data-description="{{ p.description or p.name }}"
+                                                    data-price="{{ p.unit_price or 0 }}"
+                                                    data-vat="{{ p.vat_rate or 0 }}">
+                                                {{ p.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="lines[0][desc]" class="form-control desc-input" placeholder="Description"></td>
+                                    <td><input type="text" name="lines[0][hsn]" class="form-control hsn-input" placeholder="Code"></td>
+                                    <td><input type="number" name="lines[0][qty]" class="form-control qty-input" value="1" min="1" oninput="calculateRow(this)"></td>
+                                    <td><input type="number" step="0.01" name="lines[0][rate]" class="form-control rate-input" placeholder="0.00" oninput="calculateRow(this)"></td>
+                                    <td>
+                                        <select name="lines[0][tax]" class="form-select tax-input" onchange="calculateRow(this)">
+                                            <option value="20">20%</option>
+                                            <option value="10">10%</option>
+                                            <option value="5.5">5.5%</option>
+                                            <option value="0">0%</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-end total-display">0.00</td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-white p-2">
+                        <button type="button" class="btn btn-secondary" onclick="addNewRow()">
+                            <i class="fas fa-plus me-1"></i> Add Item Row
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="col-xl-3 col-lg-4">
+                <div class="invoice-sidebar">
+
+                    <!-- Summary -->
+                    <div class="card grand-total-box mb-3 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold mb-3 border-bottom pb-2">Summary</h5>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="summary-label">Net Amount</span>
+                                <span class="summary-value" id="displayNet">0.00 €</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="summary-label">Total VAT</span>
+                                <span class="summary-value text-danger" id="displayVat">0.00 €</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="grand-total-label">Grand Total</span>
+                                <span class="grand-total-value" id="displayTotal">0.00 €</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ This stack stretches to fill remaining height -->
+                    <div class="sidebar-stack">
+
+                        <!-- Terms -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light fw-bold">Terms & Conditions</div>
+                            <textarea name="terms" class="form-control border-0" rows="3">{{ invoice.terms_conditions if invoice and invoice.terms_conditions else 'Payment due within 30 days.\nLate payments subject to 10% interest.\nJurisdiction: Paris Courts.' }}</textarea>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light fw-bold">Customer Notes</div>
+                            <textarea name="notes" class="form-control border-0" rows="2" placeholder="Thank you for your business!">{{ invoice.customer_notes if invoice else '' }}</textarea>
+                        </div>
+
+                        <!-- Bank Details -->
+                        <div class="card">
+                            <div class="card-header bg-light fw-bold">Bank Details</div>
+                            <textarea name="bank_details" class="form-control border-0" rows="3">{{ invoice.bank_details_snapshot if invoice and invoice.bank_details_snapshot else 'Bank: BNP Paribas\nIBAN: FR76 1234 5678 9012\nBIC: BNPAFRPP' }}</textarea>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+/* GLOBALS */
+var companyName = "{{ company.name }}";
+var productsData = [
+    {% for p in products %}
+    {
+        id: {{ p.id }},
+        name: "{{ p.name | e }}",
+        code: "{{ p.code or '' | e }}",
+        description: "{{ (p.description or p.name) | e }}",
+        price: {{ p.unit_price or 0 }},
+        vat:  {{ p.vat_rate or 0 }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+/* CALCULATIONS */
+function calculateRow(element) {
+    var row = element.closest('tr');
+    if (!row) return;
+
+    var qtyInput = row.querySelector('.qty-input');
+    var rateInput = row.querySelector('.rate-input');
+    var taxInput = row.querySelector('.tax-input');
+    var totalDisplay = row.querySelector('.total-display');
+
+    var qty = parseFloat(qtyInput && qtyInput.value ? qtyInput.value : 0) || 0;
+    var rate = parseFloat(rateInput && rateInput.value ? rateInput.value : 0) || 0;
+    var taxPercent = parseFloat(taxInput && taxInput.value ? taxInput.value : 0) || 0;
+
+    if (qty < 1) qty = 1;
+
+    var netAmount = qty * rate;
+    var taxAmount = netAmount * (taxPercent / 100);
+    var totalAmount = netAmount + taxAmount;
+
+    if (totalDisplay) totalDisplay.textContent = totalAmount.toFixed(2);
+    calculateAllTotals();
+}
+
+function calculateAllTotals() {
+    var rows = document.querySelectorAll('#linesContainer tr.line-item');
+    var sumNet = 0;
+    var sumVat = 0;
+    var sumTotal = 0;
+
+    rows.forEach(function(row) {
+        var qtyInput = row.querySelector('.qty-input');
+        var rateInput = row.querySelector('.rate-input');
+        var taxInput = row.querySelector('.tax-input');
+
+        var qty = parseFloat(qtyInput && qtyInput.value ? qtyInput.value : 0) || 0;
+        var rate = parseFloat(rateInput && rateInput.value ? rateInput.value : 0) || 0;
+        var taxPercent = parseFloat(taxInput && taxInput.value ? taxInput.value : 0) || 0;
+
+        if (qty < 1) qty = 1;
+
+        var lineNet = qty * rate;
+        var lineVat = lineNet * (taxPercent / 100);
+        var lineTotal = lineNet + lineVat;
+
+        sumNet += lineNet;
+        sumVat += lineVat;
+        sumTotal += lineTotal;
+    });
+
+    document.getElementById('displayNet').textContent = sumNet.toFixed(2) + ' €';
+    document.getElementById('displayVat').textContent = sumVat.toFixed(2) + ' €';
+    document.getElementById('displayTotal').textContent = sumTotal.toFixed(2) + ' €';
+
+    document.getElementById('computedSubtotal').value = sumNet.toFixed(2);
+    document.getElementById('computedTax').value = sumVat.toFixed(2);
+    document.getElementById('computedTotal').value = sumTotal.toFixed(2);
+}
+
+/* FINALIZE */
+function finalizeInvoice() {
+    var customerId = document.getElementById('customerSelect').value;
+    if (!customerId) {
+        alert('Please select a customer before finalizing.');
+        return;
+    }
+    var invoiceDate = document.querySelector('input[name="invoice_date"]').value;
+    if (!invoiceDate) {
+        alert('Please enter an invoice date.');
+        return;
+    }
+    var hasLine = false;
+    var rows = document.querySelectorAll('#linesContainer tr.line-item');
+    rows.forEach(function(row) {
+        var desc = row.querySelector('.desc-input');
+        var prod = row.querySelector('.product-select');
+        if ((desc && desc.value.trim() !== '') || (prod && prod.value)) {
+            hasLine = true;
+        }
+    });
+    if (!hasLine) {
+        alert('Please add at least one line item.');
+        return;
+    }
+
+    calculateAllTotals();
+    document.getElementById('saveType').value = 'final';
+    document.getElementById('invoiceForm').submit();
+}
+
+/* PRODUCT AUTOFILL */
+function loadProductData(selectElement) {
+    var row = selectElement.closest('tr');
+    var option = selectElement.options[selectElement.selectedIndex];
+    if (!option || !option.value) return;
+
+    var descInput = row.querySelector('.desc-input');
+    var hsnInput = row.querySelector('.hsn-input');
+    var rateInput = row.querySelector('.rate-input');
+    var taxInput = row.querySelector('.tax-input');
+
+    if (descInput) descInput.value = option.getAttribute('data-description') || '';
+    if (hsnInput) hsnInput.value = option.getAttribute('data-code') || '';
+    if (rateInput) rateInput.value = parseFloat(option.getAttribute('data-price') || 0).toFixed(2);
+
+    var vatRate = parseFloat(option.getAttribute('data-vat') || 0);
+    if (taxInput) {
+        var foundIndex = -1;
+        for (var i = 0; i < taxInput.options.length; i++) {
+            if (parseFloat(taxInput.options[i].value) === vatRate) {
+                foundIndex = i; break;
+            }
+        }
+        if (foundIndex >= 0) taxInput.selectedIndex = foundIndex;
+    }
+    calculateRow(selectElement);
+}
+
+/* ROW MANAGEMENT */
+function addNewRow() {
+    var container = document.getElementById('linesContainer');
+    var index = container.querySelectorAll('tr').length;
+
+    var optionsHtml = '<option value="">-- Select --</option>';
+    productsData.forEach(function(p) {
+        optionsHtml += '<option value="' + p.id + '" data-code="' + p.code + '" data-description="' + p.description + '" data-price="' + p.price + '" data-vat="' + p.vat + '">' + p.name + '</option>';
+    });
+
+    var tr = document.createElement('tr');
+    tr.className = 'line-item';
+    tr.innerHTML =
+        '<td><select name="lines[' + index + '][product_id]" class="form-select product-select" onchange="loadProductData(this)">' + optionsHtml + '</select></td>' +
+        '<td><input type="text" name="lines[' + index + '][desc]" class="form-control desc-input" placeholder="Description"></td>' +
+        '<td><input type="text" name="lines[' + index + '][hsn]" class="form-control hsn-input" placeholder="Code"></td>' +
+        '<td><input type="number" name="lines[' + index + '][qty]" class="form-control qty-input" value="1" min="1" oninput="calculateRow(this)"></td>' +
+        '<td><input type="number" step="0.01" name="lines[' + index + '][rate]" class="form-control rate-input" placeholder="0.00" oninput="calculateRow(this)"></td>' +
+        '<td><select name="lines[' + index + '][tax]" class="form-select tax-input" onchange="calculateRow(this)"><option value="20">20%</option><option value="10">10%</option><option value="5.5">5.5%</option><option value="0">0%</option></select></td>' +
+        '<td class="text-end total-display">0.00</td>' +
+        '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)"><i class="fas fa-times"></i></button></td>';
+
+    container.appendChild(tr);
+}
+function removeRow(button) {
+    var container = document.getElementById('linesContainer');
+    if (container.querySelectorAll('tr').length > 1) {
+        button.closest('tr').remove();
+        calculateAllTotals();
+    } else {
+        alert('At least one line item is required.');
+    }
+}
+
+/* SUPPLIER ADDRESSES */
+function updateSupplierAddress(type) {
+    var select, textarea;
+    if (type === 'bill') {
+        select = document.getElementById('billFromSelect');
+        textarea = document.getElementById('billFromText');
+    } else {
+        select = document.getElementById('shipFromSelect');
+        textarea = document.getElementById('shipFromText');
+    }
+    if (!select || !textarea) return;
+
+    if (type === 'ship' && select.value === 'same') {
+        textarea.value = document.getElementById('billFromText').value;
+        return;
+    }
+
+    var option = select.options[select.selectedIndex];
+    if (option && option.getAttribute('data-line1')) {
+        var addr = companyName + '\n' + option.getAttribute('data-line1');
+        var line2 = option.getAttribute('data-line2');
+        if (line2) addr += '\n' + line2;
+        addr += '\n' + option.getAttribute('data-city') + ' ' + option.getAttribute('data-zip');
+        addr += '\n' + option.getAttribute('data-country');
+        textarea.value = addr;
+    }
+
+    if (type === 'bill') {
+        var shipSelect = document.getElementById('shipFromSelect');
+        if (shipSelect && shipSelect.value === 'same') {
+            document.getElementById('shipFromText').value = textarea.value;
+        }
+    }
+}
+
+/* CUSTOMER ADDRESSES */
+var currentCustomerName = '';
+function loadCustomerData(customerId) {
+    if (!customerId) {
+        document.getElementById('customerVat').textContent = '--';
+        document.getElementById('customerVatHidden').value = '';
+        document.getElementById('customerNameHidden').value = '';
+        document.getElementById('billToText').value = '';
+        document.getElementById('shipToText').value = '';
+        document.getElementById('billToSelect').innerHTML = '<option value="">-- Select Customer --</option>';
+        document.getElementById('shipToSelect').innerHTML = '<option value="">-- Select Customer --</option>';
+
+        document.getElementById('buyerVatHidden').value = '';
+        document.getElementById('buyerSirenHidden').value = '';
+        document.getElementById('buyerSiretHidden').value = '';
+        document.getElementById('buyerEmailHidden').value = '';
+        document.getElementById('buyerCountryHidden').value = '';
+        return;
+    }
+
+    var select = document.getElementById('customerSelect');
+    var option = select.options[select.selectedIndex];
+    currentCustomerName = option.getAttribute('data-name') || '';
+    var vatNumber = option.getAttribute('data-vat') || '--';
+
+    document.getElementById('customerVat').textContent = vatNumber;
+    document.getElementById('customerVatHidden').value = vatNumber;
+    document.getElementById('customerNameHidden').value = currentCustomerName;
+
+    var buyerSiren = option.getAttribute('data-siren') || '';
+    var buyerSiret = option.getAttribute('data-siret') || '';
+    var buyerEmail = option.getAttribute('data-email') || '';
+    var buyerCountry = option.getAttribute('data-country') || '';
+
+    document.getElementById('buyerVatHidden').value = vatNumber || '';
+    document.getElementById('buyerSirenHidden').value = buyerSiren;
+    document.getElementById('buyerSiretHidden').value = buyerSiret;
+    document.getElementById('buyerEmailHidden').value = buyerEmail;
+    document.getElementById('buyerCountryHidden').value = buyerCountry;
+
+    fetch('/invoices/get_customer_addresses/' + customerId)
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var billSelect = document.getElementById('billToSelect');
+            var shipSelect = document.getElementById('shipToSelect');
+
+            billSelect.innerHTML = '';
+            if (data.billing_addresses && data.billing_addresses.length > 0) {
+                data.billing_addresses.forEach(function(addr, i) {
+                    var opt = document.createElement('option');
+                    opt.value = addr.id;
+                    opt.text = (addr.label || 'Billing') + ' (' + addr.city + ')';
+                    opt.setAttribute('data-line1', addr.line1);
+                    opt.setAttribute('data-line2', addr.line2 || '');
+                    opt.setAttribute('data-city', addr.city);
+                    opt.setAttribute('data-zip', addr.zip);
+                    opt.setAttribute('data-country', addr.country);
+                    if (i === 0) opt.selected = true;
+                    billSelect.appendChild(opt);
+                });
+
+                if (!buyerCountry && data.billing_addresses[0].country) {
+                    document.getElementById('buyerCountryHidden').value = data.billing_addresses[0].country;
+                }
+            } else {
+                billSelect.innerHTML = '<option value="">No billing address</option>';
+            }
+
+            shipSelect.innerHTML = '<option value="same">Same as Bill To</option>';
+            if (data.shipping_addresses) {
+                data.shipping_addresses.forEach(function(addr) {
+                    var opt = document.createElement('option');
+                    opt.value = addr.id;
+                    opt.text = (addr.label || 'Shipping') + ' (' + addr.city + ')';
+                    opt.setAttribute('data-line1', addr.line1);
+                    opt.setAttribute('data-line2', addr.line2 || '');
+                    opt.setAttribute('data-city', addr.city);
+                    opt.setAttribute('data-zip', addr.zip);
+                    opt.setAttribute('data-country', addr.country);
+                    shipSelect.appendChild(opt);
+                });
+            }
+
+            if (data.default_bill_to) document.getElementById('billToText').value = data.default_bill_to;
+            if (data.default_ship_to) document.getElementById('shipToText').value = data.default_ship_to;
+        })
+        .catch(function(err) {
+            console.error('Error loading customer:', err);
+        });
+}
+function updateCustomerAddress(type) {
+    var select, textarea;
+    if (type === 'bill') {
+        select = document.getElementById('billToSelect');
+        textarea = document.getElementById('billToText');
+    } else {
+        select = document.getElementById('shipToSelect');
+        textarea = document.getElementById('shipToText');
+    }
+    if (!select || !textarea) return;
+
+    if (type === 'ship' && select.value === 'same') {
+        textarea.value = document.getElementById('billToText').value;
+        return;
+    }
+
+    var option = select.options[select.selectedIndex];
+    if (option && option.getAttribute('data-line1')) {
+        var addr = currentCustomerName + '\n' + option.getAttribute('data-line1');
+        var line2 = option.getAttribute('data-line2');
+        if (line2) addr += '\n' + line2;
+        addr += '\n' + option.getAttribute('data-city') + ' ' + option.getAttribute('data-zip');
+        addr += '\n' + option.getAttribute('data-country');
+        textarea.value = addr;
+
+        if (type === 'bill') {
+            var cc = option.getAttribute('data-country') || '';
+            if (cc) {
+                document.getElementById('buyerCountryHidden').value = cc;
+            }
+        }
+    }
+
+    if (type === 'bill') {
+        var shipSelect = document.getElementById('shipToSelect');
+        if (shipSelect && shipSelect.value === 'same') {
+            document.getElementById('shipToText').value = textarea.value;
+        }
+    }
+}
+
+/* Keep hidden FR metadata synced */
+function syncFranceMeta() {
+    var dt = document.getElementById('frDocumentType');
+    var tc = document.getElementById('frTransactionCategory');
+    var pm = document.getElementById('frPaymentMeans');
+    var pt = document.getElementById('frPaymentTermsText');
+
+    if (dt) document.getElementById('frDocumentTypeHidden').value = dt.value;
+    if (tc) document.getElementById('frTransactionCategoryHidden').value = tc.value;
+    if (pm) document.getElementById('frPaymentMeansHidden').value = pm.value;
+    if (pt) document.getElementById('frPaymentTermsTextHidden').value = pt.value;
+}
+
+/* INIT */
+document.addEventListener('DOMContentLoaded', function() {
+    updateSupplierAddress('bill');
+    {% if invoice and invoice.customer_id %}
+    loadCustomerData({{ invoice.customer_id }});
+    {% endif %}
+    calculateAllTotals();
+    document.getElementById('invoiceForm').addEventListener('submit', function() {
+        syncFranceMeta();
+        calculateAllTotals();
+    });
+
+    var dt = document.getElementById('frDocumentType');
+    var tc = document.getElementById('frTransactionCategory');
+    var pm = document.getElementById('frPaymentMeans');
+    var pt = document.getElementById('frPaymentTermsText');
+    [dt, tc, pm].forEach(function(el){
+        if (el) el.addEventListener('change', syncFranceMeta);
+    });
+    if (pt) pt.addEventListener('input', syncFranceMeta);
+
+    syncFranceMeta();
+});
+</script>
+
+{% endblock %}

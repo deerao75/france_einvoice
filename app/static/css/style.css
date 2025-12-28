@@ -1,0 +1,243 @@
+:root {
+    --brand-orange: #FF8C00; /* Medium Orange */
+    --brand-black: #121212;  /* Deep Black */
+    --brand-dark-grey: #2C2C2C;
+    --text-on-orange: #ffffff;
+    --body-bg: #f8f9fa;      /* Light Grey for content (Not dark mode) */
+}
+
+/* ===== BRAND (HEADER LOGO) ===== */
+.brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* space between logo and text */
+}
+
+/* =========================================================
+   HEADER ALIGNMENT FIX (SAFE WITH BOOTSTRAP)
+   ---------------------------------------------------------
+   Your earlier rule forced display:flex on .navbar-collapse,
+   .nav-item, .nav-link etc. That can break collapse layout
+   and still not center correctly.
+   We only center inside the top header area, without
+   overriding collapse behaviour.
+   ========================================================= */
+
+/* Ensure header height is consistent */
+.top-header {
+    height: 60px;
+}
+
+/* Make navbar & container align vertically */
+.top-header .navbar {
+    min-height: 60px;
+    height: 60px;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.top-header .navbar .container-fluid {
+    height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+/* Brand area centered */
+.top-header .navbar-brand {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Right-side nav centered */
+.top-header .navbar-nav {
+    display: flex;
+    align-items: center;
+    height: 60px;
+}
+
+/* Each nav-item + link centered (ONLY inside top-header) */
+.top-header .navbar-nav .nav-item {
+    display: flex;
+    align-items: center;
+    height: 60px;
+}
+
+.top-header .navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Keep toggler centered too */
+.top-header .navbar-toggler {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Logo bigger and not visually “shrunk” */
+.brand-logo {
+    height: 48px;              /* bigger */
+    width: auto;               /* preserve aspect ratio */
+    max-height: 48px;
+    border-radius: 6px;
+    object-fit: contain;
+    background: rgba(255,255,255,0.06);
+    padding: 6px;
+    display: block;
+}
+
+/* Brand text baseline + placement fix */
+.brand-name {
+    font-size: 1.65rem;        /* slightly bigger */
+    font-weight: 900;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    margin: 0;                 /* prevent baseline drift */
+}
+
+.brand-accent {
+    color: var(--brand-orange); /* orange accent */
+}
+
+body {
+    background-color: var(--body-bg);
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- Navigation --- */
+.navbar-custom {
+    background-color: var(--brand-black);
+    padding: 1rem 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.navbar-custom .navbar-brand {
+    color: var(--brand-orange);
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.navbar-custom .nav-link {
+    color: #ffffff;
+    font-weight: 500;
+    margin-left: 15px;
+    transition: color 0.3s;
+}
+
+.navbar-custom .nav-link:hover {
+    color: var(--brand-orange);
+}
+
+.navbar-custom .btn-login {
+    border: 2px solid var(--brand-orange);
+    color: var(--brand-orange);
+    border-radius: 30px;
+    padding: 5px 20px;
+    font-weight: bold;
+}
+
+.navbar-custom .btn-login:hover {
+    background-color: var(--brand-orange);
+    color: white;
+}
+
+/* --- Hero Banner (Index) --- */
+.hero-section {
+    background: linear-gradient(135deg, var(--brand-black) 0%, var(--brand-dark-grey) 100%);
+    color: white;
+    padding: 100px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::after {
+    /* Orange accent line at bottom of hero */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background-color: var(--brand-orange);
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.hero-text {
+    font-size: 1.25rem;
+    color: #cccccc;
+    margin-bottom: 30px;
+}
+
+/* --- Buttons --- */
+.btn-primary-orange {
+    background-color: var(--brand-orange);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.btn-primary-orange:hover {
+    background-color: #e07b00;
+    transform: translateY(-2px);
+    color: white;
+}
+
+/* --- Footer --- */
+.footer-custom {
+    background-color: var(--brand-black);
+    color: #aaaaaa;
+    padding: 60px 0 20px;
+    margin-top: auto; /* Pushes footer to bottom */
+    border-top: 5px solid var(--brand-orange);
+}
+
+.footer-logo {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+
+.footer-link {
+    color: #aaaaaa;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.footer-link:hover {
+    color: var(--brand-orange);
+}
+
+/* --- Dashboard / Cards --- */
+.card-custom {
+    border: none;
+    border-top: 4px solid var(--brand-orange);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+}

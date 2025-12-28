@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom p-4">
+                <h4 class="m-0 fw-bold">New Product / Service</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Item Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Unit Price (€)</label>
+                            <input type="number" step="0.01" name="unit_price" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">VAT Rate (%)</label>
+                            <select name="vat_rate" class="form-select">
+                                <option value="20.0">20%</option>
+                                <option value="10.0">10%</option>
+                                <option value="5.5">5.5%</option>
+                                <option value="0.0">0%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold">Create Product</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+/* Print-friendly invoice styles; minimal to keep EU-friendly look */
+.invoice-print {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  color: #212529;
+}
+.invoice-print pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+@media print {
+  .container, .container-fluid { padding: 0 !important; }
+  .card, .shadow-sm { box-shadow: none !important; border: none !important; }
+  .btn, nav, header, footer { display: none !important; }
+  .invoice-print { padding: 0 !important; }
+}

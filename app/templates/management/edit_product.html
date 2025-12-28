@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+    <form method="POST">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold m-0">Edit Product / Service</h2>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('management.products_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary-orange px-5 fw-bold">Update</button>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Product/Service ID</label>
+                        <input type="text" name="product_ref_id" class="form-control" value="{{ product.product_ref_id }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Code / SKU</label>
+                        <input type="text" name="code" class="form-control" value="{{ product.code or '' }}">
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Unit</label>
+                        <select name="unit" class="form-select">
+                            {% for u in ['Service', 'NOS', 'Kgs', 'Lts', 'Mts', 'Box', 'Pack'] %}
+                            <option value="{{ u }}" {% if product.unit == u %}selected{% endif %}>{{ u }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea name="description" class="form-control" rows="3">{{ product.description or '' }}</textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Unit Price (€)</label>
+                        <input type="number" step="0.01" name="unit_price" class="form-control" value="{{ product.unit_price }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">VAT Rate (%)</label>
+                        <input type="number" step="0.01" name="vat_rate" class="form-control" value="{{ product.vat_rate }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
