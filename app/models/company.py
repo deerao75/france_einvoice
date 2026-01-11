@@ -11,20 +11,25 @@ class Company(db.Model):
     legal_name = db.Column(db.String(100))
     merchant_id = db.Column(db.String(20), unique=True)
 
+    # NEW: Mandatory Legal Details for Footer/Header
+    legal_form = db.Column(db.String(50))      # e.g., SAS, SARL, EURL
+    share_capital = db.Column(db.String(50))   # e.g., 1000.00
+    rcs_city = db.Column(db.String(100))       # e.g., Paris
+
     vat_number = db.Column(db.String(50))
 
     # France identifiers
-    siren = db.Column(db.String(20))         # NEW
+    siren = db.Column(db.String(20))
     siret = db.Column(db.String(50))
 
     # Invoice contact (for e-invoice/PDP payload)
-    invoice_email = db.Column(db.String(120))  # NEW
-    invoice_phone = db.Column(db.String(30))   # NEW
+    invoice_email = db.Column(db.String(120))
+    invoice_phone = db.Column(db.String(30))
 
     logo_filename = db.Column(db.String(100))
 
-    # Settings fields (add these for invoice settings)
-    numbering_mode = db.Column(db.String(20), default='AUTO')  # AUTO or MANUAL
+    # Settings fields
+    numbering_mode = db.Column(db.String(20), default='AUTO')
     fiscal_year = db.Column(db.Integer)
     invoice_prefix = db.Column(db.String(10), default='INV')
     starting_invoice_number = db.Column(db.Integer, default=1001)
@@ -32,8 +37,8 @@ class Company(db.Model):
     currency = db.Column(db.String(3), default='EUR')
 
     # E-invoicing settings
-    einvoice_channel = db.Column(db.String(10), default='PDP')  # PDP or PPF
-    einvoice_format = db.Column(db.String(20), default='FACTURX')  # FACTURX, UBL, CII
+    einvoice_channel = db.Column(db.String(10), default='PDP')
+    einvoice_format = db.Column(db.String(20), default='FACTURX')
     supplier_pdp_name = db.Column(db.String(200))
     supplier_pdp_id = db.Column(db.String(100))
 
@@ -60,7 +65,7 @@ class CompanyAddress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
 
-    type = db.Column(db.String(20), default='BILLING')  # BILLING or SHIPPING
+    type = db.Column(db.String(20), default='BILLING')
     label = db.Column(db.String(50))
 
     address_line1 = db.Column(db.String(200))

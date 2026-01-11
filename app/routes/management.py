@@ -283,7 +283,11 @@ def organization_profile():
         company.legal_name = (request.form.get('legal_name') or "").strip()
         company.siret = (request.form.get('siret') or "").strip()
 
-        # NEW: Save SIREN + invoice contact details (these were missing earlier)
+        # NEW: Save Extended Legal Details
+        _maybe_set_attr(company, "legal_form", (request.form.get("legal_form") or "").strip())
+        _maybe_set_attr(company, "share_capital", (request.form.get("share_capital") or "").strip())
+        _maybe_set_attr(company, "rcs_city", (request.form.get("rcs_city") or "").strip())
+
         _maybe_set_attr(company, "siren", (request.form.get("siren") or "").strip())
         _maybe_set_attr(company, "invoice_email", (request.form.get("invoice_email") or "").strip())
         _maybe_set_attr(company, "invoice_phone", (request.form.get("invoice_phone") or "").strip())

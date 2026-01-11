@@ -90,17 +90,34 @@
   @media print {
     .signature-wrap { page-break-inside: avoid; }
   }
+
+  /* Collapse Toggle styling */
+  .pdp-toggle-header {
+      cursor: pointer;
+      transition: background-color 0.2s;
+  }
+  .pdp-toggle-header:hover {
+      background-color: #f8f9fa;
+  }
+  .chevron-icon {
+      transition: transform 0.3s;
+  }
+  .collapsed .chevron-icon {
+      transform: rotate(-90deg);
+  }
 </style>
 
 <div class="container-fluid py-3 invoice-split-wrap">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="fw-bold m-0">View Invoices</h3>
 
-    <!-- ✅ Toolbar: Keep Create e-Invoice, move others under Actions dropdown -->
     <div class="d-flex gap-2 align-items-center">
-      <a class="btn btn-success" href="#"><i class="fas fa-file-export me-1"></i> Create e-Invoice</a>
+          <a href="{{ url_for('invoices.record_payment', invoice_id=invoice.id) }}" class="btn btn-primary shadow-sm">
+            <i class="fas fa-money-bill-wave me-1"></i> Record Payment
+          </a>
+          <a class="btn btn-success" href="#"><i class="fas fa-file-export me-1"></i> Create e-Invoice</a>
 
-      <div class="dropdown">
+          <div class="dropdown">
         <button class="btn btn-dark dropdown-toggle" type="button" id="actionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="fas fa-ellipsis-v me-1"></i> Actions
         </button>
@@ -136,7 +153,6 @@
   </div>
 
   <div class="row g-3">
-    <!-- Left panel: List -->
     <div class="col-md-3">
       <div class="card shadow-sm">
         <div class="card-header fw-bold d-flex justify-content-between">
@@ -169,16 +185,13 @@
       </div>
     </div>
 
-    <!-- Right panel -->
     <div class="col-md-9">
-      <!-- Block 1 -->
       <div class="card shadow-sm mb-3">
         <div class="card-header fw-bold">
           Invoice (Printable)
         </div>
         <div class="card-body p-0 printable-wrap">
 
-          <!-- Logo + Company name inline -->
           <div class="company-inline-head">
             <img src="{{ url_for('static', filename='images/acer_logo.png') }}" alt="Logo" onerror="this.style.display='none'">
             <div class="company-name">{{ company.legal_name or company.name }}</div>
@@ -186,13 +199,11 @@
 
           {% include 'invoices/partials/invoice_render.html' %}
 
-          <!-- ✅ Amount in words (below totals area; kept close) -->
           <div class="amount-words-wrap">
             <span class="label">Total (in words):</span>
             <span id="amountInWords">—</span>
           </div>
 
-          <!-- ✅ Signature (kept close to totals end) -->
           <div class="signature-wrap">
             <div class="signature-box">
               <div class="signature-for">
@@ -206,60 +217,74 @@
         </div>
       </div>
 
-      <!-- Block 2 -->
       <div class="card shadow-sm">
-        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-          <span>PDP Payload Fields (France e-Invoicing)</span>
-          <span class="badge bg-warning text-dark">Auto-captured from Org + Customer + Invoice</span>
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center pdp-toggle-header"
+             data-bs-toggle="collapse"
+             data-bs-target="#pdpPayloadCollapse"
+             aria-expanded="false"
+             aria-controls="pdpPayloadCollapse">
+          <span>
+            <i class="fas fa-chevron-down me-2 chevron-icon"></i>
+            PDP Payload Fields (France e-Invoicing)
+          </span>
+          <span class="badge bg-warning text-dark">Click to Expand/Collapse</span>
         </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered pdp-table mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 28%;">Field</th>
-                  <th>Value</th>
-                  <th style="width: 20%;">Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Supplier -->
-                <tr><td>Supplier Legal Name</td><td>{{ company.legal_name or company.name }}</td><td>Organization</td></tr>
-                <tr><td>Supplier Name</td><td>{{ company.name }}</td><td>Organization</td></tr>
-                <tr><td>Supplier VAT</td><td>{{ company.vat_number or '--' }}</td><td>Organization</td></tr>
-                <tr><td>Supplier SIREN</td><td>{{ company.siren or '--' }}</td><td>Organization</td></tr>
-                <tr><td>Supplier SIRET</td><td>{{ company.siret or '--' }}</td><td>Organization</td></tr>
-                <tr><td>Supplier Invoice Email</td><td>{{ company.invoice_email or '--' }}</td><td>Organization</td></tr>
-                <tr><td>Supplier Invoice Phone</td><td>{{ company.invoice_phone or '--' }}</td><td>Organization</td></tr>
 
-                <!-- Buyer -->
-                <tr><td>Buyer Name</td><td>{{ customer.name if customer else (invoice.customer_name or '--') }}</td><td>Customer</td></tr>
-                <tr><td>Buyer VAT</td><td>{{ customer.vat_number if customer else (invoice.customer_vat or '--') }}</td><td>Customer/Invoice</td></tr>
-                <tr><td>Buyer SIREN</td><td>{{ customer.siren if customer else '--' }}</td><td>Customer</td></tr>
-                <tr><td>Buyer SIRET</td><td>{{ customer.siret if customer else '--' }}</td><td>Customer</td></tr>
-                <tr><td>Buyer Email</td><td>{{ customer.email if customer else '--' }}</td><td>Customer</td></tr>
-                <tr><td>Buyer Phone</td><td>{{ customer.phone if customer else '--' }}</td><td>Customer</td></tr>
+        <div class="collapse" id="pdpPayloadCollapse">
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered pdp-table mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 28%;">Field</th>
+                      <th>Value</th>
+                      <th style="width: 20%;">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Supplier Legal Name</td><td>{{ company.legal_name or company.name }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier Name</td><td>{{ company.name }}</td><td>Organization</td></tr>
 
-                <!-- Invoice FR metadata -->
-                <tr><td>FR Document Type</td><td>{{ invoice.fr_document_type or '--' }}</td><td>Invoice</td></tr>
-                <tr><td>FR Transaction Category</td><td>{{ invoice.fr_transaction_category or '--' }}</td><td>Invoice</td></tr>
-                <tr><td>FR Payment Means</td><td>{{ invoice.fr_payment_means or '--' }}</td><td>Invoice</td></tr>
-                <tr><td>FR Payment Terms Text</td><td>{{ invoice.fr_payment_terms_text or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>Supplier Legal Form</td><td>{{ company.legal_form or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier Share Capital</td><td>{{ company.share_capital or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier RCS City</td><td>{{ company.rcs_city or '--' }}</td><td>Organization</td></tr>
 
-                <!-- Invoice core -->
-                <tr><td>Invoice Number</td><td>{{ invoice.invoice_number }}</td><td>Invoice</td></tr>
-                <tr><td>Invoice Date</td><td>{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice.invoice_date else '--' }}</td><td>Invoice</td></tr>
-                <tr><td>Due Date</td><td>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '--' }}</td><td>Invoice</td></tr>
-                <tr><td>Total Net</td><td>€{{ "%.2f"|format(invoice.total_net or 0) }}</td><td>Invoice</td></tr>
-                <tr><td>Total VAT</td><td>€{{ "%.2f"|format(invoice.total_tax or 0) }}</td><td>Invoice</td></tr>
-                <tr><td>Total Gross</td><td>€{{ "%.2f"|format(invoice.total_gross or 0) }}</td><td>Invoice</td></tr>
-              </tbody>
-            </table>
-          </div>
+                    <tr><td>Supplier VAT</td><td>{{ company.vat_number or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier SIREN</td><td>{{ company.siren or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier SIRET</td><td>{{ company.siret or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier Invoice Email</td><td>{{ company.invoice_email or '--' }}</td><td>Organization</td></tr>
+                    <tr><td>Supplier Invoice Phone</td><td>{{ company.invoice_phone or '--' }}</td><td>Organization</td></tr>
 
-          <div class="text-muted small mt-2">
-            Note: Address fields (Bill-to/Ship-to) are already included in the printable invoice block above.
-          </div>
+                    <tr><td>Buyer Name</td><td>{{ customer.name if customer else (invoice.customer_name or '--') }}</td><td>Customer</td></tr>
+                    <tr><td>Buyer VAT</td><td>{{ customer.vat_number if customer else (invoice.customer_vat or '--') }}</td><td>Customer/Invoice</td></tr>
+                    <tr><td>Buyer SIREN</td><td>{{ customer.siren if customer else '--' }}</td><td>Customer</td></tr>
+                    <tr><td>Buyer SIRET</td><td>{{ customer.siret if customer else '--' }}</td><td>Customer</td></tr>
+                    <tr><td>Buyer Email</td><td>{{ customer.email if customer else '--' }}</td><td>Customer</td></tr>
+                    <tr><td>Buyer Phone</td><td>{{ customer.phone if customer else '--' }}</td><td>Customer</td></tr>
+
+                    <tr><td>Operation Nature</td><td>{{ invoice.fr_operation_nature or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>Purchase Order Number</td><td>{{ invoice.purchase_order_number or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>Date of Supply</td><td>{{ invoice.tax_point_date.strftime('%Y-%m-%d') if invoice.tax_point_date else '--' }}</td><td>Invoice</td></tr>
+
+                    <tr><td>FR Document Type</td><td>{{ invoice.fr_document_type or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>FR Transaction Category</td><td>{{ invoice.fr_transaction_category or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>FR Payment Means</td><td>{{ invoice.fr_payment_means or '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>FR Payment Terms Text</td><td>{{ invoice.fr_payment_terms_text or '--' }}</td><td>Invoice</td></tr>
+
+                    <tr><td>Invoice Number</td><td>{{ invoice.invoice_number }}</td><td>Invoice</td></tr>
+                    <tr><td>Invoice Date</td><td>{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice.invoice_date else '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>Due Date</td><td>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '--' }}</td><td>Invoice</td></tr>
+                    <tr><td>Total Net</td><td>€{{ "%.2f"|format(invoice.total_net or 0) }}</td><td>Invoice</td></tr>
+                    <tr><td>Total VAT</td><td>€{{ "%.2f"|format(invoice.total_tax or 0) }}</td><td>Invoice</td></tr>
+                    <tr><td>Total Gross</td><td>€{{ "%.2f"|format(invoice.total_gross or 0) }}</td><td>Invoice</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="text-muted small mt-2">
+                Note: Address fields (Bill-to/Ship-to) are already included in the printable invoice block above.
+              </div>
+            </div>
         </div>
       </div>
     </div>

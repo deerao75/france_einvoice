@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Styling adjustments for bigger fonts and neutral colors */
+    .report-container {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .form-label {
+        font-size: 1.1rem !important; /* Bigger labels */
+        font-weight: 600;
+        color: #333;
+    }
+    .form-check-label {
+        font-size: 1.05rem !important; /* Bigger checkbox text */
+        padding-left: 0.5rem;
+    }
+    .btn-lg-custom {
+        font-size: 1.2rem !important;
+        padding: 12px 30px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    .btn-neutral-dark {
+        background-color: #343a40;
+        color: white;
+        border: 1px solid #343a40;
+    }
+    .btn-neutral-dark:hover {
+        background-color: #23272b;
+        color: white;
+    }
+    .btn-neutral-light {
+        background-color: #f8f9fa;
+        color: #333;
+        border: 1px solid #ccc;
+    }
+    .btn-neutral-light:hover {
+        background-color: #e2e6ea;
+        color: #333;
+    }
+    .section-title {
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        color: #555;
+        font-size: 1.25rem;
+    }
+</style>
+
+<div class="container-fluid py-4 report-container">
+    <h2 class="fw-bold mb-4 text-dark" style="font-size: 2rem;">Invoice Report Generator</h2>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('invoices.invoice_report') }}" id="reportForm">
+
+                <!-- 1. FILTER METHOD -->
+                <div class="mb-5">
+                    <h5 class="section-title"><i class="fas fa-filter me-2"></i>Filter Criteria</h5>
+                    <div class="d-flex gap-5 ms-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="filter_type" id="filterPeriod" value="period" checked onchange="toggleFilters()">
+                            <label class="form-check-label" for="filterPeriod">By Date Period</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="filter_type" id="filterCustomer" value="customer" onchange="toggleFilters()">
+                            <label class="form-check-label" for="filterCustomer">By Customer</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. FILTER INPUTS -->
+                <div class="row g-4 mb-5 ms-1">
+                    <!-- Period Inputs -->
+                    <div id="periodInputs" class="row g-4" style="width: 100%;">
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="start_date" id="startDate" class="form-control form-control-lg">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="end_date" id="endDate" class="form-control form-control-lg">
+                        </div>
+                    </div>
+
+                    <!-- Customer Inputs -->
+                    <div id="customerInputs" class="row g-4" style="display:none; width: 100%;">
+                        <div class="col-md-6">
+                            <label class="form-label">Select Customer</label>
+                            <select name="customer_id" id="customerSelect" class="form-select form-select-lg">
+                                <option value="">-- Select a Customer --</option>
+                                {% for c in customers %}
+                                <option value="{{ c.id }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. COLUMN SELECTION -->
+                <div class="mb-5">
+                    <h5 class="section-title">
+                        <i class="fas fa-table me-2"></i>Field Selection
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none" onclick="selectAll(true)">Select All</button> /
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none" onclick="selectAll(false)">Clear</button>
+                    </h5>
+
+                    <div class="row g-4 ms-1">
+                        <!-- Basic Invoice Info -->
+                        <div class="col-md-3">
+                            <h6 class="fw-bold text-muted mb-3">General</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="invoice_number" id="c1" checked>
+                                <label class="form-check-label" for="c1">Invoice Number</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="invoice_date" id="c2" checked>
+                                <label class="form-check-label" for="c2">Invoice Date</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="due_date" id="c3">
+                                <label class="form-check-label" for="c3">Due Date</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="status" id="c4" checked>
+                                <label class="form-check-label" for="c4">Status</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="purchase_order_number" id="c5">
+                                <label class="form-check-label" for="c5">PO Number</label>
+                            </div>
+                        </div>
+
+                        <!-- Customer Details -->
+                        <div class="col-md-3">
+                            <h6 class="fw-bold text-muted mb-3">Customer / Buyer</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="customer_name" id="c6" checked>
+                                <label class="form-check-label" for="c6">Customer Name</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="buyer_vat" id="c7">
+                                <label class="form-check-label" for="c7">Buyer VAT</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="buyer_siren" id="c8">
+                                <label class="form-check-label" for="c8">Buyer SIREN</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="buyer_country" id="c9">
+                                <label class="form-check-label" for="c9">Buyer Country</label>
+                            </div>
+                        </div>
+
+                        <!-- Financials -->
+                        <div class="col-md-3">
+                            <h6 class="fw-bold text-muted mb-3">Financials</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="total_net" id="c10" checked>
+                                <label class="form-check-label" for="c10">Total Net (HT)</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="total_tax" id="c11" checked>
+                                <label class="form-check-label" for="c11">Total Tax (TVA)</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="total_gross" id="c12" checked>
+                                <label class="form-check-label" for="c12">Total Gross (TTC)</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="currency" id="c13">
+                                <label class="form-check-label" for="c13">Currency</label>
+                            </div>
+                        </div>
+
+                        <!-- PDP / Factur-X Fields -->
+                        <div class="col-md-3">
+                            <h6 class="fw-bold text-muted mb-3">PDP & Compliance</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="fr_document_type" id="c14">
+                                <label class="form-check-label" for="c14">Doc Type (380/381)</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="fr_transaction_category" id="c15">
+                                <label class="form-check-label" for="c15">Trans. Category</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="fr_operation_nature" id="c16">
+                                <label class="form-check-label" for="c16">Op. Nature</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="fr_payment_means" id="c17">
+                                <label class="form-check-label" for="c17">Payment Means</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input col-checkbox" type="checkbox" name="columns" value="tax_point_date" id="c18">
+                                <label class="form-check-label" for="c18">Tax Point Date</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="d-flex gap-3 pt-3 border-top">
+                    <button type="button" onclick="submitReport('view')" class="btn btn-neutral-light btn-lg-custom">
+                        <i class="fas fa-eye me-2"></i> View Report
+                    </button>
+                    <button type="button" onclick="submitReport('export')" class="btn btn-neutral-dark btn-lg-custom">
+                        <i class="fas fa-file-excel me-2"></i> Download Excel
+                    </button>
+                </div>
+                <input type="hidden" name="action" id="formAction" value="view">
+            </form>
+        </div>
+    </div>
+
+    <!-- RESULTS TABLE (Only shows if 'results' is present) -->
+    {% if results %}
+    <div class="card shadow-sm border-0 mt-5">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <span style="font-size: 1.1rem;">Generated Results ({{ results|length }} records)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" style="font-size: 1.05rem;">
+                    <thead class="bg-light">
+                        <tr>
+                            {% for col in selected_columns %}
+                            <th class="py-3">{{ col|replace('_', ' ')|title }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in results %}
+                        <tr>
+                            {% for col in selected_columns %}
+                            <td class="py-3">{{ row[col] }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function toggleFilters() {
+        var isPeriod = document.getElementById('filterPeriod').checked;
+        document.getElementById('periodInputs').style.display = isPeriod ? 'flex' : 'none';
+        document.getElementById('customerInputs').style.display = isPeriod ? 'none' : 'flex';
+    }
+
+    function selectAll(check) {
+        var boxes = document.querySelectorAll('.col-checkbox');
+        boxes.forEach(box => box.checked = check);
+    }
+
+    function submitReport(actionType) {
+        // 1. Set Action
+        document.getElementById('formAction').value = actionType;
+
+        // 2. Validate Column Selection
+        var checkedCols = document.querySelectorAll('.col-checkbox:checked');
+        if (checkedCols.length === 0) {
+            alert("Please select at least one field to display in the report.");
+            return;
+        }
+
+        // 3. Validate Filter Inputs
+        var isPeriod = document.getElementById('filterPeriod').checked;
+        if (isPeriod) {
+            var start = document.getElementById('startDate').value;
+            var end = document.getElementById('endDate').value;
+            // It is often okay to leave dates blank to mean "All Time",
+            // but if you want strict validation uncomment below:
+            /*
+            if (!start && !end) {
+                alert("Please select a date range or switch to 'Customer' filter.");
+                return;
+            }
+            */
+        } else {
+            var cust = document.getElementById('customerSelect').value;
+            if (!cust) {
+                alert("Please select a customer from the dropdown.");
+                return;
+            }
+        }
+
+        // 4. Submit
+        document.getElementById('reportForm').submit();
+    }
+
+    // Maintain state on page reload (if filters were applied)
+    document.addEventListener('DOMContentLoaded', function() {
+        var type = "{{ request.form.filter_type }}";
+        if(type === 'customer') {
+            document.getElementById('filterCustomer').checked = true;
+            toggleFilters();
+        }
+    });
+</script>
+{% endblock %}

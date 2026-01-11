@@ -24,12 +24,19 @@ class Invoice(db.Model):
     company = db.relationship('Company', back_populates='invoices')
 
     # 3. Customer Link (Buyer)
+    # The 'customer' relationship attribute is automatically created here
+    # if your Customer model has backref='invoices' or back_populates.
+    # We ONLY define the ForeignKey here.
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
 
     # 4. Detailed Fields
     branch_name = db.Column(db.String(100))
     supplier_vat = db.Column(db.String(50))
     customer_vat = db.Column(db.String(50))
+
+    # Mandatory Transaction Details
+    purchase_order_number = db.Column(db.String(50))       # Buyer Reference
+    tax_point_date = db.Column(db.Date)                    # Date of Supply
 
     place_of_supply = db.Column(db.String(100))
     kind_attention = db.Column(db.String(100))
@@ -46,12 +53,13 @@ class Invoice(db.Model):
     bank_details_snapshot = db.Column(db.Text)
 
     # ============================
-    # France e-Invoicing (PDP) NEW
+    # France e-Invoicing (PDP)
     # ============================
     fr_document_type = db.Column(db.String(30))            # INVOICE / CREDIT_NOTE
     fr_transaction_category = db.Column(db.String(30))     # DOMESTIC / INTRA_EU / EXPORT
-    fr_payment_means = db.Column(db.String(30))            # TRANSFER / CARD / DIRECT_DEBIT / CASH / CHEQUE
-    fr_payment_terms_text = db.Column(db.String(255))      # free text
+    fr_operation_nature = db.Column(db.String(20), default='GOODS')
+    fr_payment_means = db.Column(db.String(30))
+    fr_payment_terms_text = db.Column(db.String(255))
 
     # 7. Totals
     total_net = db.Column(db.Numeric(10, 2), default=0.0)
@@ -59,6 +67,10 @@ class Invoice(db.Model):
     total_gross = db.Column(db.Numeric(10, 2), default=0.0)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # --- NEW: Self-referential relationship for Credit Notes ---
+    original_invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id'), nullable=True)
+    original_invoice = db.relationship('Invoice', remote_side=[id], backref='credit_notes')
 
     # Relationships
     lines = db.relationship('InvoiceLine', backref='invoice', cascade='all, delete-orphan')

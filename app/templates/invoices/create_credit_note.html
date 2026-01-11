@@ -1,0 +1,775 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZh3fWj7h6vC1Zl4Wq7ZqQhZp5G6k5QnJ4GqG6tKux0r3vjZc+GqGkqV5c5x5Qeg=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+    /* --- THEME & LAYOUT --- */
+    .cn-header-bg { background-color: #343a40 !important; color: white; }
+
+    .invoice-container {
+        max-width: 100%; margin: 0; padding: 0 15px 15px 15px;
+        height: calc(100vh - 80px); overflow: hidden; display: flex; flex-direction: column;
+    }
+    .invoice-container form { display: flex; flex-direction: column; height: 100%; }
+    .invoice-container form > .row { flex: 1; overflow: hidden; }
+    .invoice-container .col-xl-9, .invoice-container .col-lg-8,
+    .invoice-container .col-xl-3, .invoice-container .col-lg-4 {
+        height: 100%; overflow-y: auto; padding-bottom: 8px;
+    }
+    .invoice-container * { font-family: 'Aptos', 'Segoe UI', -apple-system, sans-serif; }
+
+    #billFromText, #shipFromText, #billToText, #shipToText {
+        min-height: 130px !important; height: 130px !important; font-size: 14px !important; resize: none;
+    }
+
+    .invoice-container .card { margin-bottom: 15px !important; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .invoice-container .card-header { padding: 10px 16px !important; font-weight: 600; }
+    .invoice-container .card-body { padding: 15px !important; }
+    .invoice-container .form-label { font-size: 14px !important; font-weight: 600 !important; margin-bottom: 5px !important; }
+    .invoice-container .form-control, .invoice-container .form-select { font-size: 15px !important; padding: 8px 12px !important; }
+    .required-star { color: #dc3545; font-weight: bold; margin-left: 2px; }
+
+    /* READ ONLY STATE */
+    .field-locked {
+        background-color: #e9ecef !important;
+        pointer-events: none !important;
+        opacity: 0.8;
+    }
+
+    .invoice-container .table thead th { font-size: 14px !important; padding: 10px 8px !important; background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
+    .invoice-container .table tbody td { padding: 0 !important; vertical-align: middle !important; }
+    .invoice-container .table tbody input, .invoice-container .table tbody select { font-size: 14px !important; padding: 10px 8px !important; border: none; width: 100%; }
+    .invoice-container .table tbody input:focus, .invoice-container .table tbody select:focus { box-shadow: inset 0 0 0 2px #ff6b35; background: #fff; outline: none; }
+    .invoice-container .total-display { font-size: 14px !important; font-weight: 600 !important; padding: 10px 8px !important; text-align: right; }
+
+    .invoice-container .grand-total-box { background-color: #f8f9fa; border: 2px solid #dee2e6; }
+    .invoice-container .grand-total-box .grand-total-value { font-size: 20px !important; font-weight: 700 !important; color: #dc3545; }
+
+    #validationModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal-content-box { background-color: #fff; margin: auto; padding: 0; border: 1px solid #888; width: 100%; max-width: 550px; border-radius: 8px; animation: slideDown 0.3s ease-out; }
+    .modal-header-err { background-color: #343a40; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body-err { padding: 20px; }
+    .modal-footer-err { padding: 10px 20px; text-align: right; border-top: 1px solid #eee; }
+    @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+
+<!-- Validation Modal -->
+<div id="validationModal">
+    <div class="modal-content-box">
+        <div class="modal-header-err">
+            <span><i class="fas fa-exclamation-triangle me-2"></i>Incomplete Data</span>
+            <button type="button" class="btn-close btn-close-white" onclick="closeValidationModal()"></button>
+        </div>
+        <div class="modal-body-err">
+            <ul id="missingFieldsList" class="text-danger fw-bold"></ul>
+        </div>
+        <div class="modal-footer-err">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeValidationModal()">Close & Fix</button>
+        </div>
+    </div>
+</div>
+
+<div class="invoice-container">
+    <form method="POST" id="cnForm" action="">
+        <!-- HIDDEN FIELDS -->
+        <input type="hidden" name="computed_subtotal" id="computedSubtotal" value="0">
+        <input type="hidden" name="computed_tax" id="computedTax" value="0">
+        <input type="hidden" name="computed_total" id="computedTotal" value="0">
+        <input type="hidden" name="save_type" id="saveType" value="draft">
+
+        <input type="hidden" name="customer_name_hidden" id="customerNameHidden" value="">
+        <input type="hidden" name="customer_vat" id="customerVatHidden" value="">
+        <input type="hidden" name="buyer_vat" id="buyerVatHidden" value="">
+        <input type="hidden" name="buyer_siren" id="buyerSirenHidden" value="">
+        <input type="hidden" name="buyer_siret" id="buyerSiretHidden" value="">
+        <input type="hidden" name="buyer_email" id="buyerEmailHidden" value="">
+        <input type="hidden" name="buyer_country" id="buyerCountryHidden" value="">
+
+        <!-- Locked Metadata -->
+        <input type="hidden" id="frDocumentTypeHidden" name="fr_document_type" value="CREDIT_NOTE">
+        <input type="hidden" id="frTransactionCategoryHidden" name="fr_transaction_category" value="DOMESTIC">
+        <input type="hidden" id="frPaymentMeansHidden" name="fr_payment_means" value="">
+        <input type="hidden" id="frPaymentTermsTextHidden" name="fr_payment_terms_text" value="">
+        <input type="hidden" id="frOperationNatureHidden" name="fr_operation_nature" value="GOODS">
+
+        <!-- HEADER BAR -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pt-2">
+            <div class="d-flex align-items-center gap-3">
+                <h2 class="fw-bold text-dark m-0">
+                    {% if is_edit %}Edit Credit Note{% else %}New Credit Note{% endif %}
+                </h2>
+
+                {% if not is_edit %}
+                <!-- MODE SWITCH -->
+                <div class="bg-white border rounded p-1 d-flex gap-2 align-items-center shadow-sm" style="font-size: 0.9rem;">
+                    <div class="form-check form-check-inline m-0 ps-2">
+                        <input class="form-check-input" type="radio" name="cn_mode" id="modeInvoice" value="invoice" checked onchange="toggleSourceMode()">
+                        <label class="form-check-label fw-bold" for="modeInvoice">Against Invoice</label>
+                    </div>
+                    <div class="form-check form-check-inline m-0 border-start ps-3">
+                        <input class="form-check-input" type="radio" name="cn_mode" id="modeOther" value="other" onchange="toggleSourceMode()">
+                        <label class="form-check-label fw-bold" for="modeOther">Other / Standalone</label>
+                    </div>
+                </div>
+
+                <!-- SOURCE INVOICE DROPDOWN -->
+                <div id="sourceInvoiceWrapper" style="width: 450px;">
+                    <select id="sourceInvoiceSelect" name="source_invoice_id" class="form-select border-primary fw-bold text-primary" onchange="loadSourceInvoice(this.value)">
+                        <option value="">-- Select Source Invoice to Offset --</option>
+                        {% for inv in available_invoices %}
+                        <option value="{{ inv.id }}">#{{ inv.invoice_number }} - {{ inv.customer.name }} ({{ "%.2f"|format(inv.total_gross) }}€)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('invoices.index') }}" class="btn btn-lg btn-outline-secondary px-3">Cancel</a>
+                <button type="button" class="btn btn-lg btn-warning px-3 fw-bold shadow-sm" onclick="validateAndSubmit('draft')">
+                   <i class="fas fa-save me-1"></i> Save Draft
+                </button>
+                <button type="button" class="btn btn-lg btn-dark px-3 fw-bold shadow-sm" onclick="validateAndSubmit('final')">
+                    <i class="fas fa-check-circle me-1"></i> Finalize CN
+                </button>
+            </div>
+         </div>
+
+        <div class="row g-4">
+            <!-- LEFT COLUMN -->
+            <div class="col-xl-9 col-lg-8">
+
+                <!-- 1. HEADER INFO -->
+                <div class="card mb-3">
+                    <div class="card-header cn-header-bg py-2">
+                        <i class="fas fa-info-circle me-2"></i>CN Details
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">CN Number<span class="required-star">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">#</span>
+                                    <input type="text" name="invoice_number" id="inpInvoiceNumber" class="form-control fw-bold"
+                                           value="{{ invoice.invoice_number if invoice else next_cn_number }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">CN Date<span class="required-star">*</span></label>
+                                <input type="date" name="invoice_date" id="inpInvoiceDate" class="form-control" required
+                                       value="{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice and invoice.invoice_date else today }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Original Inv Ref</label>
+                                <input type="text" name="purchase_order_number" id="inpOriginalRef" class="form-control"
+                                       value="{{ invoice.purchase_order_number if invoice else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Branch / Division</label>
+                                <input type="text" name="branch_name" id="inpBranch" class="form-control" value="{{ invoice.branch_name if invoice else 'Head Office' }}">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                             <div class="col-md-3">
+                                <label class="form-label">Date of Supply</label>
+                                <input type="date" name="tax_point_date" id="inpTaxPointDate" class="form-control"
+                                       value="{{ invoice.tax_point_date.strftime('%Y-%m-%d') if invoice and invoice.tax_point_date else '' }}">
+                            </div>
+                             <div class="col-md-3">
+                                 <label class="form-label">Document Type</label>
+                                <select disabled class="form-select bg-light">
+                                    <option value="CREDIT_NOTE" selected>Credit Note (Avoir)</option>
+                                </select>
+                            </div>
+                             <div class="col-md-3">
+                                <label class="form-label">Transaction Category</label>
+                                <select name="fr_transaction_category" id="frTransactionCategory" class="form-select">
+                                    <option value="DOMESTIC">Domestic (FR)</option>
+                                    <option value="INTRA_EU">Intra-EU</option>
+                                     <option value="EXPORT">Export</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Operation Nature</label>
+                                <select name="fr_operation_nature" id="frOperationNature" class="form-select">
+                                    <option value="GOODS">Goods</option>
+                                    <option value="SERVICES">Services</option>
+                                    <option value="MIXED">Mixed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                         <!-- REFUND METHOD -->
+                         <div class="row g-3 mt-1">
+                             <div class="col-md-3">
+                                <label class="form-label">Refund Method</label>
+                                <select name="fr_payment_means" id="frPaymentMeans" class="form-select">
+                                   <option value="">-- Select --</option>
+                                  <option value="OFFSET">Offset Future Invoice</option>
+                                  <option value="TRANSFER">Bank Transfer</option>
+                                  <option value="CARD">Card Refund</option>
+                                  <option value="CHEQUE">Cheque</option>
+                                </select>
+                             </div>
+                             <div class="col-md-9">
+                                <label class="form-label">Refund Terms</label>
+                                <input type="text" name="fr_payment_terms_text" id="frPaymentTermsText" class="form-control"
+                                       value="{{ invoice.fr_payment_terms_text if invoice else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CUSTOMER DETAILS -->
+                <div class="card mb-3">
+                    <div class="card-header bg-white py-2 border-bottom">
+                         <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <label class="fw-bold me-2">Customer:<span class="required-star">*</span></label>
+                                 <select name="customer_id" id="customerSelect" class="form-select d-inline-block w-75 bg-light fw-bold" onchange="loadCustomerData(this.value)">
+                                    <option value="">-- Choose Customer --</option>
+                                     {% for c in customers %}
+                                    <option value="{{ c.id }}"
+                                            data-name="{{ c.name }}"
+                                            data-vat="{{ c.vat_number }}"
+                                            data-siret="{{ c.siret or '' }}"
+                                            data-siren="{{ c.siren or '' }}"
+                                            data-email="{{ c.email or '' }}"
+                                             data-country="{% set a = c.addresses[0] if c.addresses else None %}{{ a.country if a else '' }}"
+                                            {% if invoice and invoice.customer_id == c.id %}selected{% endif %}>
+                                         {{ c.name }}
+                                    </option>
+                                     {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="badge bg-light text-dark border">Supplier VAT: <span id="supplierVat" class="fw-bold">{{ company.vat_number }}</span></span>
+                                <span class="badge bg-warning text-dark ms-2">Customer VAT: <span id="customerVat" class="fw-bold">{{ invoice.customer_vat if invoice else '--' }}</span></span>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body bg-light p-3">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                 <label class="fw-bold text-secondary mb-1">Bill From</label>
+                                <select name="bill_from_select" id="billFromSelect" class="form-select form-select-sm mb-2" onchange="updateSupplierAddress('bill')">
+                                    {% for addr in company.addresses if addr.type == 'BILLING' %}
+                                     <option value="{{ addr.id }}" data-line1="{{ addr.address_line1 }}" data-city="{{ addr.city }}" data-zip="{{ addr.zip_code }}" data-country="{{ addr.country }}" {% if loop.first %}selected{% endif %}>
+                                        {{ addr.label or 'Billing' }}
+                                    </option>
+                                     {% endfor %}
+                                </select>
+                                 <textarea name="bill_from" id="billFromText" class="form-control" rows="6" readonly style="background-color: #e9ecef;">{{ supplier_bill_default }}</textarea>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Ship From</label>
+                                <select name="ship_from_select" id="shipFromSelect" class="form-select form-select-sm mb-2" onchange="updateSupplierAddress('ship')">
+                                     <option value="same">Same as Bill From</option>
+                                    {% for addr in company.addresses if addr.type == 'SHIPPING' %}
+                                     <option value="{{ addr.id }}" data-line1="{{ addr.address_line1 }}" data-city="{{ addr.city }}" data-country="{{ addr.country }}">{{ addr.label or 'Shipping' }}</option>
+                                    {% endfor %}
+                                </select>
+                                 <textarea name="ship_from" id="shipFromText" class="form-control" rows="6" readonly style="background-color: #e9ecef;">{{ supplier_ship_default }}</textarea>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Bill To</label>
+                                <select name="bill_to_select" id="billToSelect" class="form-select form-select-sm mb-2" onchange="updateCustomerAddress('bill')">
+                                     <option value="">-- Select Customer First --</option>
+                                </select>
+                                 <textarea name="bill_to" id="billToText" class="form-control" rows="6" placeholder="Select customer...">{{ invoice.bill_to_address if invoice else '' }}</textarea>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="fw-bold text-secondary mb-1">Ship To</label>
+                                <select name="ship_to_select" id="shipToSelect" class="form-select form-select-sm mb-2" onchange="updateCustomerAddress('ship')">
+                                     <option value="">-- Select Customer First --</option>
+                                </select>
+                                <textarea name="ship_to" id="shipToText" class="form-control" rows="6" placeholder="Delivery address...">{{ invoice.ship_to_address if invoice else '' }}</textarea>
+                             </div>
+                        </div>
+
+                        <div class="row mt-3 g-3">
+                             <div class="col-md-6">
+                                <label class="fw-bold text-secondary">Kind Attention</label>
+                                <input type="text" name="kind_attention" id="inpKindAttention" class="form-control" value="{{ invoice.kind_attention if invoice else '' }}">
+                            </div>
+                             <div class="col-md-6">
+                                <label class="fw-bold text-secondary">Place of Supply</label>
+                                <select name="place_of_supply" id="inpPlaceOfSupply" class="form-select">
+                                     <option value="FR">France (FR)</option>
+                                    <option value="ES">Spain (ES)</option>
+                                     <option value="DE">Germany (DE)</option>
+                                </select>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- 3. LINE ITEMS -->
+                <div class="card mb-3">
+                    <div class="card-header cn-header-bg py-2">
+                        <i class="fas fa-list me-2"></i>Items to Credit
+                    </div>
+                    <div class="p-0 table-responsive">
+                        <table class="table table-bordered mb-0" id="lineItemsTable">
+                             <thead>
+                                <tr>
+                                    <th style="width: 20%;">Product<span class="required-star">*</span></th>
+                                    <th style="width: 20%;">Description</th>
+                                    <th style="width: 10%;">HSN/SAC</th>
+                                    <th style="width: 8%;">Qty<span class="required-star">*</span></th>
+                                    <th style="width: 12%;">Rate (€)<span class="required-star">*</span></th>
+                                    <th style="width: 10%;">Tax %<span class="required-star">*</span></th>
+                                    <th style="width: 14%;" class="text-end">Total (€)</th>
+                                    <th style="width: 6%;"></th>
+                                </tr>
+                             </thead>
+                            <tbody id="linesContainer">
+                                {% if invoice and invoice.lines %}
+                                     {% for line in invoice.lines %}
+                                    <tr class="line-item">
+                                         <td>
+                                            <select name="lines[{{ loop.index0 }}][product_id]" class="form-select product-select" onchange="loadProductData(this)">
+                                                 <option value="">-- Select --</option>
+                                                {% for p in products %}
+                                                 <option value="{{ p.id }}" data-description="{{ p.description or p.name }}" data-price="{{ p.unit_price or 0 }}" data-vat="{{ p.vat_rate or 0 }}" {% if line.product_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                                                {% endfor %}
+                                             </select>
+                                        </td>
+                                        <td><input type="text" name="lines[{{ loop.index0 }}][desc]" class="form-control desc-input" value="{{ line.description }}"></td>
+                                        <td><input type="text" name="lines[{{ loop.index0 }}][hsn]" class="form-control hsn-input" value="{{ line.hsn_sac_code or '' }}"></td>
+                                        <td><input type="number" name="lines[{{ loop.index0 }}][qty]" class="form-control qty-input" value="{{ line.quantity }}" min="1" oninput="calculateRow(this)"></td>
+                                        <td><input type="number" step="0.01" name="lines[{{ loop.index0 }}][rate]" class="form-control rate-input" value="{{ line.unit_price }}" oninput="calculateRow(this)"></td>
+                                        <td>
+                                             <select name="lines[{{ loop.index0 }}][tax]" class="form-select tax-input" onchange="calculateRow(this)">
+                                                <option value="20" {% if line.vat_rate == 20 %}selected{% endif %}>20%</option>
+                                                <option value="10" {% if line.vat_rate == 10 %}selected{% endif %}>10%</option>
+                                                 <option value="5.5" {% if line.vat_rate == 5.5 %}selected{% endif %}>5.5%</option>
+                                                <option value="0" {% if line.vat_rate == 0 %}selected{% endif %}>0%</option>
+                                             </select>
+                                        </td>
+                                        <td class="text-end total-display">{{ "%.2f"|format(line.line_total or 0) }}</td>
+                                        <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)"><i class="fas fa-times"></i></button></td>
+                                    </tr>
+                                   {% endfor %}
+                                {% else %}
+                                    <tr class="line-item">
+                                         <td>
+                                            <select name="lines[0][product_id]" class="form-select product-select" onchange="loadProductData(this)">
+                                                <option value="">-- Select --</option>
+                                                 {% for p in products %}
+                                                <option value="{{ p.id }}" data-description="{{ p.description or p.name }}" data-price="{{ p.unit_price or 0 }}" data-vat="{{ p.vat_rate or 0 }}">{{ p.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                         </td>
+                                        <td><input type="text" name="lines[0][desc]" class="form-control desc-input" placeholder="Desc"></td>
+                                        <td><input type="text" name="lines[0][hsn]" class="form-control hsn-input" placeholder="Code"></td>
+                                        <td><input type="number" name="lines[0][qty]" class="form-control qty-input" value="1" min="1" oninput="calculateRow(this)"></td>
+                                        <td><input type="number" step="0.01" name="lines[0][rate]" class="form-control rate-input" placeholder="0.00" oninput="calculateRow(this)"></td>
+                                        <td><select name="lines[0][tax]" class="form-select tax-input" onchange="calculateRow(this)"><option value="20">20%</option><option value="10">10%</option><option value="5.5">5.5%</option><option value="0">0%</option></select></td>
+                                        <td class="text-end total-display">0.00</td>
+                                         <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)"><i class="fas fa-times"></i></button></td>
+                                     </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                     </div>
+                    <div class="card-footer bg-white p-2">
+                        <button type="button" id="btnAddRow" class="btn btn-secondary" onclick="addNewRow()">
+                            <i class="fas fa-plus me-1"></i> Add Item Row
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN (Summary) -->
+            <div class="col-xl-3 col-lg-4">
+                <div class="invoice-sidebar">
+                    <div class="card grand-total-box mb-3 shadow-sm">
+                        <div class="card-body">
+                             <h5 class="card-title fw-bold mb-3 border-bottom pb-2">CN Summary</h5>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="summary-label">Net Credited</span>
+                                 <span class="summary-value" id="displayNet">0.00 €</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                 <span class="summary-label">VAT Reversal</span>
+                                <span class="summary-value text-danger" id="displayVat">0.00 €</span>
+                            </div>
+                             <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="grand-total-label">Total Refund</span>
+                                 <span class="grand-total-value" id="displayTotal">0.00 €</span>
+                            </div>
+                        </div>
+                    </div>
+
+                     <div class="sidebar-stack">
+                        <div class="card mb-3">
+                             <div class="card-header bg-light fw-bold">Reasons / Notes</div>
+                            <textarea name="notes" id="inpNotes" class="form-control" rows="3" placeholder="Reason for Credit Note (e.g. Returned Goods)">{{ invoice.customer_notes if invoice else '' }}</textarea>
+                        </div>
+                        <div class="card">
+                            <div class="card-header bg-light fw-bold">Internal Reference</div>
+                            <textarea name="terms" id="inpTerms" class="form-control" rows="2" placeholder="Internal remarks...">{{ invoice.terms_conditions if invoice else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+/* GLOBALS */
+var companyName = "{{ company.name }}";
+var productsData = [
+    {% for p in products %}
+    {
+        id: {{ p.id }},
+        name: "{{ p.name | e }}",
+        code: "{{ p.code or '' | e }}",
+        description: "{{ (p.description or p.name) | e }}",
+        price: {{ p.unit_price or 0 }},
+        vat:  {{ p.vat_rate or 0 }}
+     }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+/* 1. TOGGLE SOURCE MODE */
+function toggleSourceMode() {
+    var isInvoice = document.getElementById('modeInvoice').checked;
+    var dropdown = document.getElementById('sourceInvoiceWrapper');
+
+    if(isInvoice) {
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+        document.getElementById('sourceInvoiceSelect').value = ""; // reset
+        unlockFields(); // Allow editing in manual mode
+    }
+}
+
+/* 2. AUTO-POPULATE & FREEZE LOGIC */
+function loadSourceInvoice(invoiceId) {
+    if (!invoiceId) { unlockFields(); return; }
+
+    if (!confirm("This will load data from the invoice and LOCK editing to ensure accuracy. Continue?")) {
+        document.getElementById('sourceInvoiceSelect').value = "";
+        return;
+    }
+
+    fetch('/invoices/api/' + invoiceId)
+    .then(response => response.json())
+    .then(data => {
+        // --- 1. Populate Customer ---
+        var custSelect = document.getElementById('customerSelect');
+        custSelect.value = data.customer_id;
+
+        // --- 2. Populate Header Fields ---
+        document.getElementById('inpOriginalRef').value = data.invoice_number;
+        document.getElementById('inpBranch').value = data.branch_name || 'Head Office';
+        document.getElementById('inpTaxPointDate').value = data.tax_point_date || '';
+        document.getElementById('frTransactionCategory').value = data.fr_transaction_category || 'DOMESTIC';
+        document.getElementById('frOperationNature').value = data.fr_operation_nature || 'GOODS';
+
+        // Extra Fields
+        if(data.kind_attention) document.getElementById('inpKindAttention').value = data.kind_attention;
+        if(data.place_of_supply) document.getElementById('inpPlaceOfSupply').value = data.place_of_supply;
+
+        // --- 3. Trigger Address Load ---
+        // Load the Addresses (Text Blob directly)
+        if(data.bill_to_blob) document.getElementById('billToText').value = data.bill_to_blob;
+        if(data.ship_to_blob) document.getElementById('shipToText').value = data.ship_to_blob;
+
+        // --- 4. Rebuild Lines ---
+        var container = document.getElementById('linesContainer');
+        container.innerHTML = '';
+
+        data.lines.forEach((line, index) => {
+             var tr = createRowHTML(index, line);
+             container.appendChild(tr);
+             // Ensure line total is calculated immediately
+             calculateRow(tr.querySelector('.qty-input'));
+        });
+
+        setTimeout(() => {
+            calculateAllTotals();
+            lockFields(); // FREEZE EVERYTHING EXCEPT REFUND FIELDS
+        }, 500);
+    })
+    .catch(err => { console.error(err); alert("Error loading data."); });
+}
+
+function lockFields() {
+    // Disable inputs EXCEPT: Credit Note Number, Date, Notes, Terms, and REFUND FIELDS
+    // ALSO IGNORE BUTTONS
+    var inputs = document.querySelectorAll('#cnForm input:not([type=hidden]), #cnForm select:not(#sourceInvoiceSelect)');
+
+    inputs.forEach(el => {
+        // LIST OF EXEMPT FIELDS
+        if (el.id === 'inpInvoiceNumber' || el.id === 'inpInvoiceDate' ||
+            el.id === 'frPaymentMeans' || el.id === 'frPaymentTermsText' ||
+            el.name === 'cn_mode') {
+            return; // Skip locking these
+        }
+
+        el.classList.add('field-locked');
+        el.setAttribute('readonly', true);
+        if(el.tagName === 'SELECT') el.style.pointerEvents = 'none';
+    });
+
+    // Disable Add/Remove Rows
+    document.getElementById('btnAddRow').style.display = 'none';
+    var delBtns = document.querySelectorAll('.btn-outline-danger');
+    delBtns.forEach(btn => btn.style.display = 'none');
+}
+
+function unlockFields() {
+    var inputs = document.querySelectorAll('.field-locked');
+    inputs.forEach(el => {
+        el.classList.remove('field-locked');
+        el.removeAttribute('readonly');
+        if(el.tagName === 'SELECT') el.style.pointerEvents = 'auto';
+    });
+    document.getElementById('btnAddRow').style.display = 'inline-block';
+    var delBtns = document.querySelectorAll('.btn-outline-danger');
+    delBtns.forEach(btn => btn.style.display = 'inline-block');
+}
+
+/* 3. ROW & CALCULATION HELPERS */
+function createRowHTML(index, lineData) {
+    // If lineData provided (API), use it. Else empty.
+    var pId = lineData ? lineData.product_id : '';
+    var desc = lineData ? lineData.description : '';
+    var hsn = lineData ? lineData.hsn_sac_code : '';
+    var qty = lineData ? lineData.quantity : 1;
+    var rate = lineData ? lineData.unit_price : 0;
+    var vat = lineData ? lineData.vat_rate : 20;
+
+    var optionsHtml = '<option value="">-- Select --</option>';
+    productsData.forEach(function(p) {
+        var sel = (pId == p.id) ? 'selected' : '';
+        optionsHtml += `<option value="${p.id}" ${sel} data-description="${p.description}" data-price="${p.price}" data-vat="${p.vat}">${p.name}</option>`;
+    });
+
+    var tr = document.createElement('tr');
+    tr.className = 'line-item';
+    tr.innerHTML = `
+        <td><select name="lines[${index}][product_id]" class="form-select product-select" onchange="loadProductData(this)">${optionsHtml}</select></td>
+        <td><input type="text" name="lines[${index}][desc]" class="form-control desc-input" value="${desc}"></td>
+        <td><input type="text" name="lines[${index}][hsn]" class="form-control hsn-input" value="${hsn}"></td>
+        <td><input type="number" name="lines[${index}][qty]" class="form-control qty-input" value="${qty}" min="1" oninput="calculateRow(this)"></td>
+        <td><input type="number" step="0.01" name="lines[${index}][rate]" class="form-control rate-input" value="${rate}" oninput="calculateRow(this)"></td>
+        <td>
+            <select name="lines[${index}][tax]" class="form-select tax-input" onchange="calculateRow(this)">
+                <option value="20" ${vat==20?'selected':''}>20%</option>
+                <option value="10" ${vat==10?'selected':''}>10%</option>
+                <option value="5.5" ${vat==5.5?'selected':''}>5.5%</option>
+                <option value="0" ${vat==0?'selected':''}>0%</option>
+            </select>
+        </td>
+        <td class="text-end total-display">0.00</td>
+        <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)"><i class="fas fa-times"></i></button></td>
+    `;
+    return tr;
+}
+
+function calculateRow(element) {
+    if(!element) return;
+    var row = element.closest('tr');
+    var qty = parseFloat(row.querySelector('.qty-input').value || 0);
+    var rate = parseFloat(row.querySelector('.rate-input').value || 0);
+    var tax = parseFloat(row.querySelector('.tax-input').value || 0);
+    var net = qty * rate;
+    var total = net + (net * tax / 100);
+    row.querySelector('.total-display').textContent = total.toFixed(2);
+    calculateAllTotals();
+}
+
+function calculateAllTotals() {
+    var rows = document.querySelectorAll('#linesContainer tr.line-item');
+    var sumNet = 0; var sumVat = 0; var sumTotal = 0;
+    rows.forEach(function(row) {
+        var qty = parseFloat(row.querySelector('.qty-input').value || 0);
+        var rate = parseFloat(row.querySelector('.rate-input').value || 0);
+        var tax = parseFloat(row.querySelector('.tax-input').value || 0);
+        var net = qty * rate;
+        var vat = net * tax / 100;
+        sumNet += net; sumVat += vat; sumTotal += net + vat;
+    });
+    document.getElementById('displayNet').textContent = sumNet.toFixed(2) + ' €';
+    document.getElementById('displayVat').textContent = sumVat.toFixed(2) + ' €';
+    document.getElementById('displayTotal').textContent = sumTotal.toFixed(2) + ' €';
+    document.getElementById('computedSubtotal').value = sumNet.toFixed(2);
+    document.getElementById('computedTax').value = sumVat.toFixed(2);
+    document.getElementById('computedTotal').value = sumTotal.toFixed(2);
+}
+
+function loadCustomerData(customerId) {
+    if (!customerId) return;
+    var select = document.getElementById('customerSelect');
+    var option = select.options[select.selectedIndex];
+
+    document.getElementById('customerVat').textContent = option.getAttribute('data-vat') || '--';
+    document.getElementById('customerVatHidden').value = option.getAttribute('data-vat');
+    document.getElementById('customerNameHidden').value = option.getAttribute('data-name');
+
+    document.getElementById('buyerVatHidden').value = option.getAttribute('data-vat');
+    document.getElementById('buyerCountryHidden').value = option.getAttribute('data-country');
+
+    // Only load standard addresses if not already filled by Invoice load
+    if(!document.getElementById('billToText').value) {
+        fetch('/invoices/get_customer_addresses/' + customerId)
+            .then(res => res.json())
+            .then(data => {
+                var billSelect = document.getElementById('billToSelect');
+                var shipSelect = document.getElementById('shipToSelect');
+
+                billSelect.innerHTML = '';
+                if (data.billing_addresses.length) {
+                    data.billing_addresses.forEach((addr, i) => {
+                        var opt = new Option((addr.label||'Billing')+' ('+addr.city+')', addr.id);
+                        opt.setAttribute('data-line1', addr.line1); opt.setAttribute('data-city', addr.city);
+                        opt.setAttribute('data-zip', addr.zip); opt.setAttribute('data-country', addr.country);
+                        if(i===0) opt.selected = true;
+                        billSelect.appendChild(opt);
+                    });
+                    if(data.billing_addresses[0].country) document.getElementById('buyerCountryHidden').value = data.billing_addresses[0].country;
+                } else { billSelect.innerHTML = '<option>No address</option>'; }
+
+                shipSelect.innerHTML = '<option value="same">Same as Bill To</option>';
+                if(data.shipping_addresses) {
+                     data.shipping_addresses.forEach(addr => {
+                        var opt = new Option((addr.label||'Ship')+' ('+addr.city+')', addr.id);
+                        opt.setAttribute('data-line1', addr.line1);
+                        opt.setAttribute('data-city', addr.city);
+                        opt.setAttribute('data-country', addr.country);
+                        shipSelect.appendChild(opt);
+                     });
+                }
+                updateCustomerAddress('bill');
+                updateCustomerAddress('ship');
+            });
+    }
+}
+
+function updateCustomerAddress(type) {
+    var select = document.getElementById(type === 'bill' ? 'billToSelect' : 'shipToSelect');
+    var txt = document.getElementById(type === 'bill' ? 'billToText' : 'shipToText');
+    if (type === 'ship' && select.value === 'same') {
+        txt.value = document.getElementById('billToText').value;
+        return;
+    }
+
+    var opt = select.options[select.selectedIndex];
+    if(opt && opt.getAttribute('data-line1')) {
+        txt.value = document.getElementById('customerNameHidden').value + '\n' + opt.getAttribute('data-line1') + '\n' + opt.getAttribute('data-city') + ' ' + opt.getAttribute('data-zip') + '\n' + opt.getAttribute('data-country');
+    }
+}
+function updateSupplierAddress(type) {
+    var select = document.getElementById('billFromSelect');
+    var txt = document.getElementById('billFromText');
+    var opt = select.options[select.selectedIndex];
+    if(opt) txt.value = companyName + '\n' + opt.getAttribute('data-line1') + '\n' + opt.getAttribute('data-city') + ' ' + opt.getAttribute('data-zip') + '\n' + opt.getAttribute('data-country');
+}
+
+function loadProductData(select) {
+    var row = select.closest('tr');
+    var opt = select.options[select.selectedIndex];
+    if(opt.value) {
+        row.querySelector('.desc-input').value = opt.getAttribute('data-description');
+        row.querySelector('.rate-input').value = opt.getAttribute('data-price');
+        var tax = opt.getAttribute('data-vat');
+        var taxSel = row.querySelector('.tax-input');
+        for(var i=0;i<taxSel.options.length;i++) {
+            if(taxSel.options[i].value == tax) taxSel.selectedIndex = i;
+        }
+        calculateRow(select);
+    }
+}
+
+function addNewRow() {
+    var container = document.getElementById('linesContainer');
+    var index = container.querySelectorAll('tr').length;
+    var tr = createRowHTML(index, null);
+    container.appendChild(tr);
+}
+function removeRow(btn) {
+    if(document.querySelectorAll('#linesContainer tr').length > 1) {
+        btn.closest('tr').remove(); calculateAllTotals();
+    }
+}
+
+function validateAndSubmit(type) {
+    var missing = [];
+    if(!document.getElementById('customerSelect').value) missing.push("Customer");
+    if(!document.getElementById('inpInvoiceNumber').value) missing.push("Credit Note Number");
+
+    if(document.getElementById('modeInvoice').checked && !document.getElementById('inpOriginalRef').value) missing.push("Original Invoice Reference");
+
+    if(missing.length > 0) {
+        var list = document.getElementById('missingFieldsList');
+        list.innerHTML = '';
+        missing.forEach(m => { var li=document.createElement('li'); li.textContent=m; list.appendChild(li); });
+        document.getElementById('validationModal').style.display = 'flex';
+        return;
+    }
+
+    // UNLOCK FIELDS FOR SUBMISSION (Otherwise disabled fields don't send data)
+    unlockFields();
+
+    document.getElementById('saveType').value = type;
+
+    // Sync Hidden
+    document.getElementById('frTransactionCategoryHidden').value = document.getElementById('frTransactionCategory').value;
+    document.getElementById('frOperationNatureHidden').value = document.getElementById('frOperationNature').value;
+    document.getElementById('frPaymentMeansHidden').value = document.getElementById('frPaymentMeans').value;
+
+    // Sync Terms as well just in case
+    if(document.getElementById('frPaymentTermsText')) {
+        document.getElementById('frPaymentTermsTextHidden').value = document.getElementById('frPaymentTermsText').value;
+    }
+
+    document.getElementById('cnForm').submit();
+}
+function closeValidationModal() { document.getElementById('validationModal').style.display = 'none'; }
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSupplierAddress('bill');
+    calculateAllTotals();
+    toggleSourceMode();
+});
+
+// Check if Backend says Read Only
+{% if is_readonly %}
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lock all inputs
+    var inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(el => {
+        el.setAttribute('readonly', true);
+        el.setAttribute('disabled', true);
+        el.classList.add('field-locked');
+    });
+
+    // 2. Hide Action Buttons
+    var buttons = document.querySelectorAll('button:not(.close-modal-btn)');
+    buttons.forEach(btn => btn.style.display = 'none');
+
+    // 3. Hide Save/Finalize Buttons
+    document.querySelector('.btn-warning').style.display = 'none'; // Save Draft
+    document.querySelector('.btn-dark').style.display = 'none';    // Finalize
+
+    // 4. Change Title
+    document.querySelector('h2').textContent = "View Credit Note (Finalized)";
+});
+</script>
+{% endblock %}

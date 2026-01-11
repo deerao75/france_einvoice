@@ -6,7 +6,6 @@
     <!-- EVERYTHING on the right side goes inside this div -->
 
     <style>
-
         .status-badge {
             padding: 6px 12px;
             border-radius: 20px;
@@ -18,25 +17,10 @@
             font-size: calc(1rem * var(--ui-scale, 1.15));
         }
 
-        .status-draft {
-            background-color: #b56727;
-            color: #ffffff;
-        }
-
-        .status-final {
-            background-color: #d4edda;
-            color:  #155724;
-        }
-
-        .status-paid {
-            background-color: #cce5ff;
-            color: #004085;
-        }
-
-        . status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
+        .status-draft { background-color: #b56727; color: #ffffff; }
+        .status-final { background-color: #d4edda; color: #155724; }
+        .status-paid { background-color: #cce5ff; color: #004085; }
+        .status-cancelled { background-color: #f8d7da; color: #721c24; }
 
         .invoice-table th {
             background-color: #343a40 !important;
@@ -44,77 +28,51 @@
             font-weight: 600;
         }
 
-        .invoice-table td {
-            vertical-align: middle;
-        }
+        .invoice-table td { vertical-align: middle; }
 
+        /* Monospace for amounts so they align nicely */
         .amount-cell {
             font-weight: 600;
-            font-family: 'Courier New', monospace ! important;
+            font-family: 'Courier New', monospace !important;
         }
 
-        . summary-card {
-            border: none;
-            border-radius: 10px;
-        }
+        .summary-card { border: none; border-radius: 10px; }
+        .table-responsive { overflow: visible !important; }
+        .invoice-table { overflow: visible !important; }
+        .invoice-table tbody { overflow: visible !important; }
 
-        /* FIX: Allow dropdown to overflow outside table */
-        .table-responsive {
-            overflow:  visible ! important;
-        }
-
-        .invoice-table {
-            overflow:  visible !important;
-        }
-
-        .invoice-table tbody {
-            overflow:  visible !important;
-        }
-
-        .invoice-table td: last-child {
-            overflow: visible !important;
-        }
-
-        /* Dropdown positioning */
-        .dropdown {
-            position: relative;
-        }
-
+        .dropdown { position: relative; }
         .dropdown-menu {
-            position: absolute ! important;
+            position: absolute !important;
             z-index: 9999 !important;
             min-width: 180px;
             padding: 8px 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border: 1px solid #e0e0e0;
-            background:  #fff;
+            background: #fff;
         }
+        .dropdown-item { padding: 10px 16px; display: flex; align-items: center; }
+        .dropdown-item:hover { background-color: #f8f9fa; }
 
-        .dropdown-item {
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-        }
-
-        .dropdown-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        /* Button Styling */
         .btn-edit {
-            background-color:  #0d6efd;
+            background-color: #0d6efd;
             border-color: #0d6efd;
             color: #fff;
             padding: 6px 14px;
             font-weight: 500;
             font-size: 14px;
         }
+        .btn-edit:hover { background-color: #0b5ed7; color: #fff; }
 
-        .btn-edit:hover {
-            background-color:  #0b5ed7;
-            border-color: #0a58ca;
+        .btn-view {
+            background-color: #198754;
+            border-color: #198754;
             color: #fff;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size: 14px;
         }
+        .btn-view:hover { background-color: #157347; color: #fff; }
 
         .btn-action {
             background-color: #6c757d;
@@ -122,20 +80,10 @@
             color: #fff;
             padding: 6px 14px;
             font-weight: 500;
-            font-size:  14px;
+            font-size: 14px;
         }
-
-        .btn-action:hover {
-            background-color: #5c636a;
-            border-color:  #565e64;
-            color: #fff;
-        }
-
-        /* Action cell */
-        .action-cell {
-            white-space: nowrap;
-        }
-
+        .btn-action:hover { background-color: #5c636a; color: #fff; }
+        .action-cell { white-space: nowrap; }
     </style>
 </div>
 
@@ -144,11 +92,17 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-black m-0">Invoice Dashboard</h2>
-            <p class="text-black-50 mb-0">Manage your invoices - drafts and finalized</p>
+            <p class="text-black-50 mb-0">Manage Invoices and Credit Notes</p>
         </div>
-        <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange btn-lg px-4 fw-bold shadow-sm">
-            + New Invoice
-        </a>
+        <div class="d-flex gap-2">
+            <!-- Separate Create Buttons -->
+            <a href="{{ url_for('invoices.create_credit_note') }}" class="btn btn-outline-danger btn-lg px-3 fw-bold shadow-sm">
+                <i class="fas fa-reply me-1"></i> Credit Note
+            </a>
+            <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange btn-lg px-4 fw-bold shadow-sm">
+                + New Invoice
+            </a>
+        </div>
     </div>
 
     <!-- Summary Cards -->
@@ -158,7 +112,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">Total Invoices</p>
+                            <p class="text-muted mb-1">Total Documents</p>
                             <h3 class="fw-bold mb-0">{{ invoices|length }}</h3>
                         </div>
                         <div class="bg-primary bg-opacity-10 p-3 rounded">
@@ -176,10 +130,8 @@
                             <p class="text-muted mb-1">Drafts</p>
                             <h3 class="fw-bold mb-0 text-warning">
                                 {% set draft_count = [] %}
-                                {% for inv in invoices %}
-                                    {% if inv.status.value == 'DRAFT' %}
-                                        {% set _ = draft_count.append(1) %}
-                                    {% endif %}
+                                {% for inv in invoices if inv.status.value == 'DRAFT' %}
+                                    {% set _ = draft_count.append(1) %}
                                 {% endfor %}
                                 {{ draft_count|length }}
                             </h3>
@@ -199,10 +151,8 @@
                             <p class="text-muted mb-1">Finalized</p>
                             <h3 class="fw-bold mb-0 text-success">
                                 {% set final_count = [] %}
-                                {% for inv in invoices %}
-                                    {% if inv.status.value == 'SENT' %}
-                                        {% set _ = final_count.append(1) %}
-                                    {% endif %}
+                                {% for inv in invoices if inv.status.value == 'SENT' %}
+                                    {% set _ = final_count.append(1) %}
                                 {% endfor %}
                                 {{ final_count|length }}
                             </h3>
@@ -219,13 +169,17 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">Total Value</p>
+                            <p class="text-muted mb-1">Net Revenue</p>
                             <h3 class="fw-bold mb-0">
-                                {% set total_value = [] %}
+                                {% set revenue = namespace(val=0) %}
                                 {% for inv in invoices %}
-                                    {% set _ = total_value.append(inv.total_gross or 0) %}
+                                    {% if inv.fr_document_type == 'CREDIT_NOTE' %}
+                                        {% set revenue.val = revenue.val - (inv.total_gross or 0) %}
+                                    {% else %}
+                                        {% set revenue.val = revenue.val + (inv.total_gross or 0) %}
+                                    {% endif %}
                                 {% endfor %}
-                                €{{ "%.2f"|format(total_value|sum) }}
+                                €{{ "%.2f"|format(revenue.val) }}
                             </h3>
                         </div>
                         <div class="bg-info bg-opacity-10 p-3 rounded">
@@ -240,12 +194,17 @@
     <!-- Invoice Table -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold">All Invoices</h5>
+            <h5 class="mb-0 fw-bold">All Documents</h5>
             <div class="d-flex gap-2">
-                <select class="form-select form-select-sm" id="statusFilter" onchange="filterInvoices()" style="width: 160px;">
+                <select class="form-select form-select-sm" id="typeFilter" onchange="filterInvoices()" style="width: 140px;">
+                    <option value="all">All Types</option>
+                    <option value="INVOICE">Invoices</option>
+                    <option value="CREDIT_NOTE">Credit Notes</option>
+                </select>
+                <select class="form-select form-select-sm" id="statusFilter" onchange="filterInvoices()" style="width: 140px;">
                     <option value="all">All Status</option>
-                    <option value="DRAFT">Drafts Only</option>
-                    <option value="SENT">Finalized Only</option>
+                    <option value="DRAFT">Drafts</option>
+                    <option value="SENT">Finalized</option>
                 </select>
             </div>
         </div>
@@ -268,9 +227,15 @@
                     </thead>
                     <tbody>
                         {% for inv in invoices %}
-                        <tr class="invoice-row" data-status="{{ inv.status.value }}">
+                        <!-- Added data-type attribute for JS filtering -->
+                        <tr class="invoice-row" data-status="{{ inv.status.value }}" data-type="{{ inv.fr_document_type }}">
                             <td class="ps-4 p-3">
-                                <span class="fw-bold text-primary">{{ inv.invoice_number }}</span>
+                                {% if inv.fr_document_type == 'CREDIT_NOTE' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger me-1" title="Credit Note">CN</span>
+                                {% else %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1" title="Invoice">INV</span>
+                                {% endif %}
+                                <span class="fw-bold text-dark">{{ inv.invoice_number }}</span>
                             </td>
                             <td class="p-3">
                                 {% if inv.invoice_date %}
@@ -287,7 +252,7 @@
                                         -
                                     {% endif %}
                                 </div>
-                                {% if inv. customer_vat %}
+                                {% if inv.customer_vat %}
                                 <small class="text-muted">VAT: {{ inv.customer_vat }}</small>
                                 {% endif %}
                             </td>
@@ -298,11 +263,31 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <td class="p-3 text-end amount-cell">€{{ "%.2f"|format(inv.total_net or 0) }}</td>
-                            <td class="p-3 text-end amount-cell text-danger">€{{ "%.2f"|format(inv.total_tax or 0) }}</td>
-                            <td class="p-3 text-end amount-cell fw-bold">€{{ "%.2f"|format(inv.total_gross or 0) }}</td>
+
+                            <td class="p-3 text-end amount-cell">
+                                {% if inv.fr_document_type == 'CREDIT_NOTE' %}
+                                     <span class="text-danger">-€{{ "%.2f"|format(inv.total_net or 0) }}</span>
+                                {% else %}
+                                     €{{ "%.2f"|format(inv.total_net or 0) }}
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-end amount-cell text-muted">
+                                {% if inv.fr_document_type == 'CREDIT_NOTE' %}
+                                     <span class="text-danger">-€{{ "%.2f"|format(inv.total_tax or 0) }}</span>
+                                {% else %}
+                                     €{{ "%.2f"|format(inv.total_tax or 0) }}
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-end amount-cell fw-bold">
+                                 {% if inv.fr_document_type == 'CREDIT_NOTE' %}
+                                     <span class="text-danger">-€{{ "%.2f"|format(inv.total_gross or 0) }}</span>
+                                {% else %}
+                                     €{{ "%.2f"|format(inv.total_gross or 0) }}
+                                {% endif %}
+                            </td>
+
                             <td class="p-3 text-center">
-                                {% if inv.status. value == 'DRAFT' %}
+                                {% if inv.status.value == 'DRAFT' %}
                                     <span class="status-badge status-draft">Draft</span>
                                 {% elif inv.status.value == 'SENT' %}
                                     <span class="status-badge status-final">Final</span>
@@ -315,28 +300,45 @@
                                 {% endif %}
                             </td>
                             <td class="p-3 text-center pe-4 action-cell">
-                                <!-- Edit Button -->
-                                <a href="{{ url_for('invoices.edit', id=inv.id) }}" class="btn btn-edit">
-                                    Edit
-                                </a>
+                                <!-- Logic for Edit/View Button -->
+                                {% if inv.status.value == 'DRAFT' %}
+                                    <a href="{{ url_for('invoices.edit', id=inv.id) }}" class="btn btn-edit">
+                                        Edit
+                                    </a>
+                                {% else %}
+                                    <!-- Use 'view' endpoint OR 'edit' with read-only flag -->
+                                    <a href="{{ url_for('invoices.edit', id=inv.id) }}" class="btn btn-view">
+                                        <i class="fas fa-eye me-1"></i> View
+                                    </a>
+                                {% endif %}
 
                                 <!-- Actions Dropdown -->
                                 <div class="dropdown d-inline-block">
                                     <button class="btn btn-action dropdown-toggle" type="button" id="actionMenu{{ inv.id }}" data-bs-toggle="dropdown" aria-expanded="false">
                                         Actions
                                     </button>
-                                    <!-- Actions Dropdown (replace items inside existing dropdown) -->
                                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionMenu{{ inv.id }}">
-                                      <li><a class="dropdown-item" href="{{ url_for('invoices.view', id=inv.id) }}">View Invoice</a></li>
+
+                                      <!-- Record Payment Link Added -->
+                                      {% if inv.status.value != 'PAID' and inv.status.value != 'DRAFT' and inv.status.value != 'CANCELLED' %}
+                                      <li>
+                                          <a class="dropdown-item text-success fw-bold" href="{{ url_for('invoices.record_payment', invoice_id=inv.id) }}">
+                                              <i class="fas fa-money-bill-wave me-2"></i> Record Payment
+                                          </a>
+                                      </li>
+                                      <li><hr class="dropdown-divider"></li>
+                                      {% endif %}
+
+                                      <li><a class="dropdown-item" href="{{ url_for('invoices.view', id=inv.id) }}">View HTML</a></li>
                                       <li><a class="dropdown-item" href="{{ url_for('invoices.print_invoice', id=inv.id) }}">Print</a></li>
                                       <li><a class="dropdown-item" href="{{ url_for('invoices.pdf', id=inv.id) }}">Download PDF</a></li>
                                       <li><hr class="dropdown-divider"></li>
                                       <li><a class="dropdown-item" href="{{ url_for('invoices.duplicate', id=inv.id) }}">Duplicate</a></li>
-                                      <li><a class="dropdown-item" href="#">Send Email</a></li>
+
                                       {% if inv.status.value == 'DRAFT' %}
                                       <li><hr class="dropdown-divider"></li>
                                       <li>
-                                        <a class="dropdown-item text-danger" href="{{ url_for('invoices.delete', id=inv.id) }}" onclick="return confirm('Are you sure you want to delete this draft invoice?')">
+                                        <a class="dropdown-item text-danger" href="{{ url_for('invoices.delete', id=inv.id) }}" onclick="return confirm('Are you sure you want to delete this draft?')">
                                           Delete
                                         </a>
                                       </li>
@@ -351,14 +353,10 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <div class="mb-4">
-                    <span style="font-size: 64px;">📄</span>
-                </div>
-                <h5 class="text-muted">No invoices yet</h5>
-                <p class="text-muted mb-4">Create your first invoice to get started</p>
-                <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange">
-                    + Create Invoice
-                </a>
+                <div class="mb-4"><span style="font-size: 64px;">📄</span></div>
+                <h5 class="text-muted">No documents yet</h5>
+                <p class="text-muted mb-4">Create your first invoice or credit note</p>
+                <a href="{{ url_for('invoices.create') }}" class="btn btn-primary-orange">+ Create Invoice</a>
             </div>
             {% endif %}
         </div>
@@ -367,17 +365,23 @@
 
 <script>
     function filterInvoices() {
-        var filter = document.getElementById('statusFilter').value;
+        var statusFilter = document.getElementById('statusFilter').value;
+        var typeFilter = document.getElementById('typeFilter').value;
         var rows = document.querySelectorAll('.invoice-row');
 
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-            if (filter === 'all' || row.getAttribute('data-status') === filter) {
-                row. style.display = '';
+        rows.forEach(function(row) {
+            var rowStatus = row.getAttribute('data-status');
+            var rowType = row.getAttribute('data-type'); // INVOICE or CREDIT_NOTE
+
+            var statusMatch = (statusFilter === 'all' || rowStatus === statusFilter);
+            var typeMatch = (typeFilter === 'all' || rowType === typeFilter);
+
+            if (statusMatch && typeMatch) {
+                row.style.display = '';
             } else {
-                row.style. display = 'none';
+                row.style.display = 'none';
             }
-        }
+        });
     }
 </script>
 {% endblock %}

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .payment-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .card-border { border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .section-title { font-weight: 700; color: #2c3e50; font-size: 1.1rem; margin-bottom: 15px; }
+    .total-box { background: #f8f9fa; border: 1px dashed #ced4da; border-radius: 8px; padding: 15px; }
+    .total-label { font-size: 0.9rem; color: #6c757d; font-weight: 600; }
+    .total-value { font-size: 1.25rem; font-weight: 800; color: #212529; }
+    .text-balance { color: #dc3545; }
+
+    /* Toggle Switch */
+    .mode-switch { display: flex; gap: 0; border: 1px solid #dee2e6; background: #fff; border-radius: 6px; overflow: hidden; width: fit-content; }
+    .mode-option { padding: 8px 20px; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: #6c757d; transition: all 0.2s; }
+    .mode-option.active { background: #0d6efd; color: #fff; }
+    .mode-option:hover:not(.active) { background: #f1f3f5; }
+</style>
+
+<div class="payment-container">
+    <form method="POST" id="paymentForm">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold m-0"><i class="fas fa-cash-register me-2"></i>Record Payment</h2>
+            <div>
+                <a href="{{ url_for('invoices.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-success fw-bold px-4"><i class="fas fa-check me-2"></i>Save Payment</button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-12">
+                <div class="card card-border">
+                    <div class="card-body">
+                        <h5 class="section-title">Payment Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Date <span class="text-danger">*</span></label>
+                                <input type="date" name="payment_date" class="form-control" value="{{ today }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Mode (France)</label>
+                                <select name="payment_mode" class="form-select">
+                                    <option value="VIREMENT">Virement (Bank Transfer)</option>
+                                    <option value="CHEQUE">Chèque</option>
+                                    <option value="CARTE_BANCAIRE">Carte Bancaire</option>
+                                    <option value="PRELEVEMENT">Prélèvement (Direct Debit)</option>
+                                    <option value="ESPECES">Espèces (Cash)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Reference / Cheque No.</label>
+                                <input type="text" name="reference" class="form-control" placeholder="e.g. VIR-2023-899">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Deposit To</label>
+                                <select name="bank_account" class="form-select">
+                                    <option value="MAIN">Main Business Account</option>
+                                    <option value="CASH">Petty Cash</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-12">
+                <div class="card card-border">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="section-title m-0">Allocate Payment</h5>
+                            <div class="mode-switch">
+                                <div class="mode-option {{ 'active' if target_invoice else '' }}" onclick="setMode('single')" id="btnSingle">Single Invoice</div>
+                                <div class="mode-option {{ '' if target_invoice else 'active' }}" onclick="setMode('multi')" id="btnMulti">Multiple Invoices</div>
+                            </div>
+                            <input type="hidden" name="allocation_mode" id="allocationMode" value="{{ 'single' if target_invoice else 'multi' }}">
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)"></th>
+                                        <th>Invoice No.</th>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th class="text-end">Invoice Amount</th>
+                                        <th class="text-end">Due Balance</th>
+                                        <th class="text-end" style="width: 150px;">Payment (€)</th>
+                                        <th class="text-end" style="width: 150px;">
+                                            Tax Deduction (€)
+                                            <i class="fas fa-info-circle text-muted ms-1" title="Retenue à la source / Withholding Tax adjustment"></i>
+                                        </th>
+                                        <th class="text-end">Remaining</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoiceTableBody">
+                                    {% for inv in unpaid_invoices %}
+                                    {% set is_target = (target_invoice and inv.id == target_invoice.id) %}
+                                    <tr class="invoice-row {{ 'table-active' if is_target else '' }}" data-id="{{ inv.id }}">
+                                        <td>
+                                            <input type="checkbox" name="invoices[{{ loop.index0 }}][selected]"
+                                                   class="form-check-input row-check"
+                                                   onchange="toggleRow(this)"
+                                                   {{ 'checked' if is_target else '' }}>
+                                            <input type="hidden" name="invoices[{{ loop.index0 }}][id]" value="{{ inv.id }}">
+                                        </td>
+                                        <td class="fw-bold">{{ inv.invoice_number }}</td>
+                                        <td>{{ inv.invoice_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ inv.customer.name if inv.customer else inv.customer_name }}</td>
+                                        <td class="text-end text-muted">{{ "%.2f"|format(inv.total_gross) }}</td>
+                                        <td class="text-end fw-bold text-balance" data-balance="{{ inv.total_gross }}">
+                                            {{ "%.2f"|format(inv.total_gross) }} </td>
+                                        <td>
+                                            <input type="number" step="0.01" name="invoices[{{ loop.index0 }}][amount]"
+                                                   class="form-control form-control-sm text-end pay-input"
+                                                   value="{{ inv.total_gross if is_target else '0.00' }}"
+                                                   {{ 'readonly' if not is_target else '' }}
+                                                   oninput="calcRow(this)">
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" name="invoices[{{ loop.index0 }}][tax_deduction]"
+                                                   class="form-control form-control-sm text-end ded-input"
+                                                   value="0.00"
+                                                   {{ 'readonly' if not is_target else '' }}
+                                                   oninput="calcRow(this)">
+                                        </td>
+                                        <td class="text-end text-muted remaining-display">0.00</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-12">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">Notes / Memo</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Additional details regarding this payment adjustment..."></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="total-box">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="total-label">Total Payment Amount:</span>
+                                <span class="fw-bold text-success" id="sumPayment">0.00 €</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="total-label">Total Tax Deduction:</span>
+                                <span class="fw-bold text-warning" id="sumDeduction">0.00 €</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="total-label text-dark" style="font-size:1rem;">Total Settled:</span>
+                                <span class="total-value" id="sumTotalSettled">0.00 €</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function setMode(mode) {
+        document.getElementById('allocationMode').value = mode;
+        document.getElementById('btnSingle').classList.toggle('active', mode === 'single');
+        document.getElementById('btnMulti').classList.toggle('active', mode === 'multi');
+
+        // Reset Logic: Uncheck all if switching to Single (logic can be refined)
+        if(mode === 'single') {
+            const checks = document.querySelectorAll('.row-check');
+            checks.forEach(c => { c.checked = false; toggleRow(c); });
+            alert("Select the single invoice you wish to pay.");
+        }
+    }
+
+    function toggleAll(master) {
+        const checks = document.querySelectorAll('.row-check');
+        checks.forEach(c => {
+            c.checked = master.checked;
+            toggleRow(c);
+        });
+    }
+
+    function toggleRow(checkbox) {
+        const row = checkbox.closest('tr');
+        const payInput = row.querySelector('.pay-input');
+        const dedInput = row.querySelector('.ded-input');
+
+        if (checkbox.checked) {
+            payInput.readOnly = false;
+            dedInput.readOnly = false;
+            // Auto-fill full balance if 0
+            if(parseFloat(payInput.value) === 0) {
+                const bal = parseFloat(row.querySelector('.text-balance').dataset.balance);
+                payInput.value = bal.toFixed(2);
+            }
+            row.classList.add('table-active');
+        } else {
+            payInput.readOnly = true;
+            dedInput.readOnly = true;
+            payInput.value = '0.00';
+            dedInput.value = '0.00';
+            row.classList.remove('table-active');
+        }
+        calcRow(payInput);
+    }
+
+    function calcRow(input) {
+        const row = input.closest('tr');
+        const balance = parseFloat(row.querySelector('.text-balance').dataset.balance) || 0;
+        const pay = parseFloat(row.querySelector('.pay-input').value) || 0;
+        const ded = parseFloat(row.querySelector('.ded-input').value) || 0;
+
+        const totalSettled = pay + ded;
+        const remaining = balance - totalSettled;
+
+        const remDisplay = row.querySelector('.remaining-display');
+        remDisplay.textContent = remaining.toFixed(2);
+
+        if(remaining < 0) remDisplay.classList.add('text-danger');
+        else remDisplay.classList.remove('text-danger');
+
+        calcTotals();
+    }
+
+    function calcTotals() {
+        let totalPay = 0;
+        let totalDed = 0;
+
+        document.querySelectorAll('.invoice-row').forEach(row => {
+            if(row.querySelector('.row-check').checked) {
+                totalPay += parseFloat(row.querySelector('.pay-input').value) || 0;
+                totalDed += parseFloat(row.querySelector('.ded-input').value) || 0;
+            }
+        });
+
+        document.getElementById('sumPayment').textContent = totalPay.toFixed(2) + ' €';
+        document.getElementById('sumDeduction').textContent = totalDed.toFixed(2) + ' €';
+        document.getElementById('sumTotalSettled').textContent = (totalPay + totalDed).toFixed(2) + ' €';
+    }
+
+    // Init totals on load
+    document.addEventListener('DOMContentLoaded', () => {
+        calcTotals();
+        document.querySelectorAll('.invoice-row').forEach(row => {
+            const chk = row.querySelector('.row-check');
+            if(chk.checked) toggleRow(chk); // Initialize pre-selected rows
+        });
+    });
+</script>
+{% endblock %}

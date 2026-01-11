@@ -38,7 +38,6 @@
 
 <div class="org-wrap">
   <form method="POST" enctype="multipart/form-data">
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center py-3 org-header">
       <div class="d-flex align-items-center gap-3">
         <h2 class="org-title m-0">Organization</h2>
@@ -51,7 +50,6 @@
       </div>
     </div>
 
-    <!-- Tabs -->
     <ul class="nav nav-tabs mt-3" id="orgTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button" role="tab" aria-controls="tab-profile" aria-selected="true">
@@ -72,31 +70,28 @@
 
     <div class="tab-content pt-3">
 
-      <!-- PROFILE TAB -->
       <div class="tab-pane fade show active" id="tab-profile" role="tabpanel" aria-labelledby="profile-tab">
         <div class="row g-4">
           <div class="col-12">
             <div class="row g-4">
-              <!-- Identity -->
               <div class="col-lg-4">
                 <div class="card card-border shadow-sm h-100">
                   <div class="card-body">
                     <div class="bucket-title mb-1"><i class="fas fa-id-card me-2"></i>Identity</div>
                     <div class="bucket-sub mb-3">Basic organization identity used on invoices</div>
 
-                    <!-- Logo -->
                     <div class="mb-3">
                       <label class="muted-label d-block mb-2">Organization Logo</label>
                       <div class="logo-box mb-2">
                         {% if company.logo_filename %}
-                          <img id="logoPreview" src="{{ url_for('static', filename='uploads/' + company.logo_filename) }}" alt="Logo">
+                           <img id="logoPreview" src="{{ url_for('static', filename='uploads/' + company.logo_filename) }}" alt="Logo">
                         {% else %}
                           <img id="logoPreview" src="" alt="" style="display:none;">
                           <div class="text-muted">No logo uploaded</div>
                         {% endif %}
                       </div>
                       <input type="file" name="logo" id="logoInput" class="form-control" accept="image/*">
-                      <div class="small-help mt-1">PNG/JPG, recommended max height 200px.</div>
+                       <div class="small-help mt-1">PNG/JPG, recommended max height 200px.</div>
                     </div>
 
                     <div class="mb-3">
@@ -104,8 +99,19 @@
                       <input type="text" name="name" class="form-control" value="{{ company.name or '' }}" required>
                     </div>
 
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="muted-label">Legal Form</label>
+                            <input type="text" name="legal_form" class="form-control" value="{{ company.legal_form or '' }}" placeholder="e.g. SAS">
+                        </div>
+                        <div class="col-6">
+                            <label class="muted-label">Share Capital</label>
+                            <input type="text" name="share_capital" class="form-control" value="{{ company.share_capital or '' }}" placeholder="e.g. 1000 €">
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                      <label class="muted-label">Legal Name</label>
+                      <label class="muted-label">Legal Name (if different)</label>
                       <input type="text" name="legal_name" class="form-control" value="{{ company.legal_name or '' }}">
                     </div>
 
@@ -123,7 +129,6 @@
                 </div>
               </div>
 
-              <!-- Tax Information -->
               <div class="col-lg-4">
                 <div class="card card-border shadow-sm h-100">
                   <div class="card-body">
@@ -140,6 +145,11 @@
                       <input type="text" class="form-control" name="siret" value="{{ company.siret or '' }}" placeholder="14 digits">
                     </div>
 
+                    <div class="mb-3">
+                      <label class="muted-label">RCS City (Immatriculation)</label>
+                      <input type="text" class="form-control" name="rcs_city" value="{{ company.rcs_city or '' }}" placeholder="e.g. Paris">
+                    </div>
+
                     <div class="mb-0">
                       <label class="muted-label">VAT ID</label>
                       <input type="text" class="form-control" value="{{ company.vat_number or '' }}" name="vat_number" readonly>
@@ -148,7 +158,6 @@
                 </div>
               </div>
 
-              <!-- Contact Information -->
               <div class="col-lg-4">
                 <div class="card card-border shadow-sm h-100">
                   <div class="card-body">
@@ -170,7 +179,6 @@
             </div>
           </div>
 
-          <!-- Additional Fields BELOW -->
           <div class="col-12">
             <div class="card card-border shadow-sm">
               <div class="card-body">
@@ -187,7 +195,6 @@
         </div>
       </div>
 
-      <!-- BILL/SHIP TAB -->
       {% set bill_addrs = company.addresses|selectattr('type','equalto','BILLING')|list %}
       {% set ship_addrs = company.addresses|selectattr('type','equalto','SHIPPING')|list %}
       {% set primary_bill = bill_addrs[0] if bill_addrs|length > 0 else None %}
@@ -209,7 +216,6 @@
               <div class="card-body">
                 <h6 class="section-title mb-2"><i class="fas fa-map-marker-alt me-2"></i>Primary Bill/Ship</h6>
                 <div class="small-help mb-2">Primary locations used by default on invoices.</div>
-                <!-- Primary BILL FROM (index 0) -->
                 <div class="address-card billing mb-2">
                   <span class="address-type-badge">Bill From</span>
                   <div class="row g-2 pt-2">
@@ -244,7 +250,6 @@
                   <input type="hidden" name="addresses[0][type]" value="BILLING">
                   <input type="hidden" name="addresses[0][id]" value="{{ primary_bill.id if primary_bill else 'new' }}">
                 </div>
-                <!-- Primary SHIP FROM (index 1) -->
                 <div class="address-card shipping">
                   <span class="address-type-badge">Ship From</span>
                   <div class="row g-2 pt-2">
@@ -272,7 +277,7 @@
                       <input type="text" class="form-control" name="addresses[1][zip]" value="{{ primary_ship.zip_code if primary_ship else '' }}">
                     </div>
                     <div class="col-md-7">
-                      <label class="muted-label">City</label>
+                       <label class="muted-label">City</label>
                       <input type="text" class="form-control" name="addresses[1][city]" value="{{ primary_ship.city if primary_ship else '' }}">
                     </div>
                   </div>
@@ -288,7 +293,6 @@
               <div class="card-body">
                 <h6 class="section-title mb-2"><i class="fas fa-warehouse me-2"></i>Secondary Bill/Ship</h6>
                 <div class="small-help mb-2">Optional secondary locations (branch / warehouse).</div>
-                <!-- Secondary BILL FROM (index 2) -->
                 <div class="address-card billing mb-2">
                   <span class="address-type-badge">Bill From</span>
                   <div class="row g-2 pt-2">
@@ -313,7 +317,7 @@
                     </div>
                     <div class="col-md-5">
                       <label class="muted-label">Postal Code</label>
-                      <input type="text" class="form-control" name="addresses[2][zip]" value="{{ secondary_bill.zip_code if secondary_bill else '' }}">
+                       <input type="text" class="form-control" name="addresses[2][zip]" value="{{ secondary_bill.zip_code if secondary_bill else '' }}">
                     </div>
                     <div class="col-md-7">
                       <label class="muted-label">City</label>
@@ -323,7 +327,6 @@
                   <input type="hidden" name="addresses[2][type]" value="BILLING">
                   <input type="hidden" name="addresses[2][id]" value="{{ secondary_bill.id if secondary_bill else 'new' }}">
                 </div>
-                <!-- Secondary SHIP FROM (index 3) -->
                 <div class="address-card shipping">
                   <span class="address-type-badge">Ship From</span>
                   <div class="row g-2 pt-2">
@@ -335,7 +338,7 @@
                       <label class="muted-label">Country</label>
                       <select class="form-select" name="addresses[3][country]">
                         {% set eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'] %}
-                        {% for cc in eu %}<option value="{{ cc }}" {% if (secondary_ship and secondary_ship.country==cc) or (not secondary_ship and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
+                         {% for cc in eu %}<option value="{{ cc }}" {% if (secondary_ship and secondary_ship.country==cc) or (not secondary_ship and cc=='FR') %}selected{% endif %}>{{ cc }}</option>{% endfor %}
                       </select>
                     </div>
                     <div class="col-12">
@@ -347,11 +350,11 @@
                       <input type="text" class="form-control" name="addresses[3][line2]" value="{{ secondary_ship.address_line2 if secondary_ship else '' }}">
                     </div>
                     <div class="col-md-5">
-                      <label class="muted-label">Postal Code</label>
+                       <label class="muted-label">Postal Code</label>
                       <input type="text" class="form-control" name="addresses[3][zip]" value="{{ secondary_ship.zip_code if secondary_ship else '' }}">
                     </div>
                     <div class="col-md-7">
-                      <label class="muted-label">City</label>
+                       <label class="muted-label">City</label>
                       <input type="text" class="form-control" name="addresses[3][city]" value="{{ secondary_ship.city if secondary_ship else '' }}">
                     </div>
                   </div>
@@ -362,7 +365,6 @@
             </div>
           </div>
 
-          <!-- Add more (limit to 2 additions) -->
           <div class="col-12">
             <div class="card card-border shadow-sm">
               <div class="card-body">
@@ -403,7 +405,7 @@
                         <input type="text" class="form-control" name="addresses[{{ idx }}][line2]" value="{{ addr.address_line2 or '' }}">
                       </div>
                       <div class="col-md-3">
-                        <label class="muted-label">Postal Code</label>
+                         <label class="muted-label">Postal Code</label>
                         <input type="text" class="form-control" name="addresses[{{ idx }}][zip]" value="{{ addr.zip_code or '' }}">
                       </div>
                       <div class="col-md-4">
@@ -429,16 +431,13 @@
         </div>
       </div>
 
-      <!-- SETTINGS TAB -->
       <div class="tab-pane fade" id="tab-settings" role="tabpanel" aria-labelledby="settings-tab">
         <div class="row g-4">
-          <!-- Invoice settings -->
           <div class="col-lg-6">
             <div class="card card-border shadow-sm h-100">
               <div class="card-body">
                 <h6 class="section-title mb-3"><i class="fas fa-file-invoice me-2"></i>Invoice Settings</h6>
 
-                <!-- Numbering mode -->
                 {% set numbering_mode = (company.numbering_mode or 'AUTO') if company.numbering_mode is defined else 'AUTO' %}
                 <div class="mb-2">
                   <label class="muted-label d-block mb-1">Invoice Numbering</label>
@@ -455,36 +454,31 @@
                   <div class="small-help mt-1">Switch anytime between Auto and Manual. Changes apply to future invoices.</div>
                 </div>
 
-                <!-- Auto section -->
                 <div id="autoSection">
                   <div class="row g-2">
                     <div class="col-md-6">
                       <label class="muted-label">Fiscal Year</label>
-                      <!-- CRITICAL: keep name=fiscal_year so backend can save -->
                       <select name="fiscal_year" id="autoFiscalYear" class="form-select" onchange="updateInvoicePreview()">
-                        {% for yr in range(2023, 2032) %}
+                       {% for yr in range(2023, 2032) %}
                         <option value="{{ yr }}" {% if company.fiscal_year==yr %}selected{% endif %}>{{ yr }}</option>
                         {% endfor %}
                       </select>
                     </div>
                     <div class="col-md-6">
                       <label class="muted-label">Invoice Prefix</label>
-                      <!-- CRITICAL: keep name=invoice_prefix -->
                       <input type="text" name="invoice_prefix" id="autoPrefix" class="form-control" value="{{ company.invoice_prefix or 'INV' }}" oninput="updateInvoicePreview()">
                     </div>
                     <div class="col-md-6">
                       <label class="muted-label">Suffix (Next Number, max 6 digits)</label>
-                      <!-- CRITICAL: keep name=starting_invoice_number -->
                       <input type="number" name="starting_invoice_number" id="autoSuffix" class="form-control" value="{{ company.starting_invoice_number or 1001 }}" min="0" max="999999" oninput="limitSuffixDigits(this); updateInvoicePreview()">
                       <div class="small-help">Auto-increments by +1 for each new invoice.</div>
                     </div>
                     <div class="col-md-6 d-flex align-items-end">
                       <div class="preview-box w-100" id="autoPreview">Next: —</div>
-                    </div>
+                     </div>
                   </div>
                 </div>
 
-                <!-- Manual section -->
                 <div id="manualSection" class="mt-3">
                   <label class="muted-label d-block mb-1">Manual Number Entry</label>
                   <div class="small-help">
@@ -497,12 +491,10 @@
                 <div class="row g-2">
                   <div class="col-md-6">
                     <label class="muted-label">Payment Terms (days)</label>
-                    <!-- CRITICAL: keep name=payment_terms -->
                     <input type="number" name="payment_terms" class="form-control" value="{{ company.payment_terms or 30 }}">
                   </div>
                   <div class="col-md-6">
                     <label class="muted-label">Default Currency</label>
-                    <!-- CRITICAL: keep name=currency -->
                     <select name="currency" class="form-select">
                       <option value="EUR" {% if company.currency=='EUR' %}selected{% endif %}>EUR (€)</option>
                       <option value="GBP" {% if company.currency=='GBP' %}selected{% endif %}>GBP (£)</option>
@@ -519,7 +511,7 @@
                     <div class="col-md-6">
                       <label class="muted-label">Default E-Invoice Channel</label>
                       <select name="einvoice_channel" class="form-select">
-                        <option value="PDP" {% if (company.einvoice_channel or 'PDP') == 'PDP' %}selected{% endif %}>PDP</option>
+                       <option value="PDP" {% if (company.einvoice_channel or 'PDP') == 'PDP' %}selected{% endif %}>PDP</option>
                         <option value="PPF" {% if company.einvoice_channel == 'PPF' %}selected{% endif %}>PPF</option>
                       </select>
                     </div>
@@ -530,7 +522,7 @@
                         <option value="UBL" {% if company.einvoice_format == 'UBL' %}selected{% endif %}>UBL 2.1</option>
                         <option value="CII" {% if company.einvoice_format == 'CII' %}selected{% endif %}>CII (UN/CEFACT)</option>
                       </select>
-                    </div>
+                     </div>
                   </div>
                 </div>
 
@@ -538,13 +530,11 @@
             </div>
           </div>
 
-          <!-- Bank + Terms & Notes (compact, stacked) -->
           <div class="col-lg-6">
             <div class="card card-border shadow-sm compact-card h-100">
               <div class="card-body">
                 <h6 class="section-title mb-2"><i class="fas fa-university me-2"></i>Bank Settings</h6>
 
-                <!-- Bank accounts list: Show existing ones or nothing -->
                 <div id="bankContainer" class="vstack">
                   {% if company.bank_accounts and company.bank_accounts|length > 0 %}
                     {% for ba in company.bank_accounts %}
@@ -568,14 +558,13 @@
                         </div>
                         <div class="col-md-6">
                           <label class="muted-label">BIC / SWIFT</label>
-                          <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][bic]" value="{{ ba.bic or '' }}" placeholder="DEUTDEBBXXX">
+                           <input type="text" class="form-control" name="accounts[{{ loop.index0 }}][bic]" value="{{ ba.bic or '' }}" placeholder="DEUTDEBBXXX">
                         </div>
                       </div>
                     </div>
                     {% endfor %}
                   {% else %}
-                    <!-- NO DEFAULT EMPTY ENTRY - will be added by JavaScript when needed -->
-                  {% endif %}
+                    {% endif %}
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-2">
@@ -583,7 +572,6 @@
                   <span class="small-help">Click to add a bank account. Empty accounts will not be saved.</span>
                 </div>
 
-                <!-- Terms & Notes BELOW bank details -->
                 <div class="mt-3">
                   <h6 class="section-title mb-2"><i class="fas fa-scale-balanced me-2"></i>Terms & Conditions</h6>
                   <textarea name="default_terms" class="form-control" rows="4" placeholder="EU-compliant payment terms, late payment interest (Directive 2011/7/EU), jurisdiction, retention of title, GDPR clauses...">{{ company.default_terms or '' }}</textarea>
@@ -591,7 +579,7 @@
 
                 <div class="mt-3">
                   <h6 class="section-title mb-2"><i class="fas fa-comment-dots me-2"></i>Customer Notes</h6>
-                  <textarea name="default_notes" class="form-control" rows="3" placeholder="Message to appear on invoices (e.g., thank you note, support contact).">{{ company.default_notes or '' }}</textarea>
+                   <textarea name="default_notes" class="form-control" rows="3" placeholder="Message to appear on invoices (e.g., thank you note, support contact).">{{ company.default_notes or '' }}</textarea>
                 </div>
 
               </div>
@@ -656,7 +644,7 @@
           <input type="text" class="form-control" name="accounts[${bankIdx}][account_holder]">
         </div>
         <div class="col-md-6">
-          <label class="muted-label">Bank Name</label>
+           <label class="muted-label">Bank Name</label>
           <input type="text" class="form-control" name="accounts[${bankIdx}][bank_name]">
         </div>
         <div class="col-md-6">
@@ -685,7 +673,6 @@
     if (b2) b2.disabled = disable;
   }
   refreshExtraButtons();
-
   function euCountryOptions(selected) {
     const eu = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
     return eu.map(cc => `<option value="${cc}" ${selected===cc?'selected':''}>${cc}</option>`).join('');
@@ -706,14 +693,14 @@
         <div class="row g-2 pt-2">
           <div class="col-md-3">
             <label class="muted-label">Type</label>
-            <select class="form-select" name="addresses[${addrIndex}][type]" onchange="toggleExtraAddressStyling(this)">
+             <select class="form-select" name="addresses[${addrIndex}][type]" onchange="toggleExtraAddressStyling(this)">
               <option value="BILLING" ${kind==='BILLING'?'selected':''}>Bill From</option>
               <option value="SHIPPING" ${kind==='SHIPPING'?'selected':''}>Ship From</option>
             </select>
           </div>
           <div class="col-md-4">
             <label class="muted-label">Label</label>
-            <input type="text" class="form-control" name="addresses[${addrIndex}][label]" placeholder="Branch / Warehouse">
+             <input type="text" class="form-control" name="addresses[${addrIndex}][label]" placeholder="Branch / Warehouse">
           </div>
           <div class="col-md-5">
             <label class="muted-label">Address Line 1</label>
@@ -721,7 +708,7 @@
           </div>
           <div class="col-md-5">
             <label class="muted-label">Address Line 2</label>
-            <input type="text" class="form-control" name="addresses[${addrIndex}][line2]">
+             <input type="text" class="form-control" name="addresses[${addrIndex}][line2]">
           </div>
           <div class="col-md-3">
             <label class="muted-label">Postal Code</label>
@@ -729,7 +716,7 @@
           </div>
           <div class="col-md-4">
             <label class="muted-label">City</label>
-            <input type="text" class="form-control" name="addresses[${addrIndex}][city]">
+             <input type="text" class="form-control" name="addresses[${addrIndex}][city]">
           </div>
           <div class="col-md-4">
             <label class="muted-label">Country</label>
@@ -750,9 +737,11 @@
     if (!card) return;
     const badge = card.querySelector('.address-type-badge');
     if (sel.value === 'SHIPPING') {
-      card.classList.remove('billing'); card.classList.add('shipping'); if (badge) badge.textContent = 'Ship From';
+      card.classList.remove('billing'); card.classList.add('shipping');
+      if (badge) badge.textContent = 'Ship From';
     } else {
-      card.classList.remove('shipping'); card.classList.add('billing'); if (badge) badge.textContent = 'Bill From';
+      card.classList.remove('shipping'); card.classList.add('billing');
+      if (badge) badge.textContent = 'Bill From';
     }
   }
   function removeExtraAddress(btn) {
@@ -762,8 +751,11 @@
   }
 
   // Numbering mode UI + Preview
-  function pad6(n) { const v = parseInt(n, 10); if (isNaN(v) || v < 0) return '000001'; return String(v).padStart(6, '0'); }
-  function limitSuffixDigits(el) { if (!el) return; const v = parseInt(el.value || 0, 10); if (v > 999999) el.value = 999999; if (v < 0) el.value = 0; }
+  function pad6(n) { const v = parseInt(n, 10);
+  if (isNaN(v) || v < 0) return '000001'; return String(v).padStart(6, '0'); }
+  function limitSuffixDigits(el) { if (!el) return;
+  const v = parseInt(el.value || 0, 10); if (v > 999999) el.value = 999999;
+  if (v < 0) el.value = 0; }
   function updateInvoicePreview() {
     const prefix = document.getElementById('autoPrefix')?.value || 'INV';
     const fy = document.getElementById('autoFiscalYear')?.value || new Date().getFullYear();
